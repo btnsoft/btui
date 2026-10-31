@@ -119,7 +119,7 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(functi
       required={required}
       name={name}
     >
-      <NumberField.Group className={cx("bt-input-wrap", className)}>
+      <NumberField.Group className={cx("bt-input-wrap", className)} data-steppers={flag(!hideSteppers)}>
         {hideSteppers ? null : <NumberField.Decrement className="bt-number-btn" aria-label={t.decrease}>−</NumberField.Decrement>}
         {prefix ? <span className="bt-adorn">{prefix}</span> : null}
         <NumberField.Input ref={ref} className="bt-input bt-number" aria-label={ariaLabel} />

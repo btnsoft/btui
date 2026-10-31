@@ -19,6 +19,8 @@ export type Column<T> = {
   header: ReactNode;
   /** Cell content. Defaults to the value. */
   cell?: (row: T) => ReactNode;
+  /** Small mark before the cell content, such as an avatar. */
+  icon?: (row: T) => ReactNode;
   /** The raw value behind the cell, used by sorting, filters, totals and exports. Defaults to the field named `key`. */
   value?: (row: T) => unknown;
   /** Value used for sorting when it differs from `value`. */
@@ -27,6 +29,8 @@ export type Column<T> = {
   type?: ColumnType;
   /** Plain text for copying and exports. Defaults to the value. */
   format?: (value: unknown, row: T) => string;
+  /** For numbers stored in a smaller unit, such as 100 for kuruş: people then filter, paste, sum and export in lira. */
+  scale?: number;
   sortable?: boolean;
   align?: "left" | "right" | "center";
   width?: number | string;
@@ -108,7 +112,7 @@ export function sortRows<T>(rows: T[], column: Column<T> | undefined, direction:
   return column ? sortByMany(rows, [{ key: column.key, direction }], [column], lang) : rows;
 }
 
-function matches(value: unknown, filter: ColumnFilter, text: string, lang: string) {
+function matches(value: unknown, filter: ColumnFilter, text: string, lang: string, scale = 1) {
   switch (filter.type) {
     case "set":
       return filter.values.includes(text);
@@ -121,7 +125,7 @@ function matches(value: unknown, filter: ColumnFilter, text: string, lang: strin
       if (filter.op === "empty") return isBlank(value);
       if (filter.op === "notEmpty") return !isBlank(value);
       if (isBlank(value)) return false;
-      const n = Number(value);
+      const n = Number(value) / scale;
       const v = filter.value ?? 0;
       switch (filter.op) {
         case "=": return n === v;
@@ -161,7 +165,10 @@ export function filterRows<T>(rows: T[], columns: Column<T>[], filters: Filters,
   if (active.length === 0 && !query) return rows;
   return rows.filter((row) => {
     for (const column of active) {
-      if (!matches(readValue(column, row), filters[column.key], textOf(column, row), lang)) return false;
+      const filter = filters[column.key];
+      // Text is only needed by these two, and formatting it for every row is what slows a large filter.
+      const text = filter.type === "text" || filter.type === "set" ? textOf(column, row) : "";
+      if (!matches(readValue(column, row), filter, text, lang, column.scale)) return false;
     }
     return !query || columns.some((column) => !column.hidden && includesText(textOf(column, row), query, lang));
   });
@@ -208,13 +215,17 @@ export type PivotConfig<T> = {
   /** Number being summarised. */
   value: Column<T>;
   aggregate: Exclude<Aggregate, ((values: unknown[]) => unknown)>;
+  /** Header for a value of the across field, when its sort key is not what people should read. */
+  columnLabel?: (value: string) => ReactNode;
+  /** Order of the across values. Defaults to alphabetical. */
+  columnOrder?: (a: string, b: string) => number;
 };
 
 export type PivotRow = { id: string } & Record<string, unknown>;
 
 /** Turns rows into a cross-tab: feed the result to DataTable, with a total column and a total row. */
-export function pivot<T>(data: T[], { rows, columns: across, value, aggregate: kind }: PivotConfig<T>, lang: string, totalLabel: string) {
-  const heads = Array.from(new Set(data.map((row) => textOf(across, row)))).sort(new Intl.Collator(lang, { numeric: true }).compare);
+export function pivot<T>(data: T[], { rows, columns: across, value, aggregate: kind, columnLabel, columnOrder }: PivotConfig<T>, lang: string, totalLabel: string) {
+  const heads = Array.from(new Set(data.map((row) => textOf(across, row)))).sort(columnOrder ?? new Intl.Collator(lang, { numeric: true }).compare);
   const leaves: Array<{ path: string[]; rows: T[] }> = [];
   const walk = (nodes: GroupNode<T>[], path: string[]) => {
     for (const node of nodes) {
@@ -223,14 +234,23 @@ export function pivot<T>(data: T[], { rows, columns: across, value, aggregate: k
     }
   };
   walk(groupRows(data, rows), []);
-  const summarise = (members: T[], head?: string) => {
-    const scope = head === undefined ? members : members.filter((row) => textOf(across, row) === head);
-    return scope.length ? aggregate(kind, scope.map((row) => readValue(value, row))) : null;
+  const bucket = (members: T[]) => {
+    const parts = new Map<string, T[]>();
+    for (const row of members) {
+      const head = textOf(across, row);
+      const part = parts.get(head);
+      if (part) part.push(row);
+      else parts.set(head, [row]);
+    }
+    return parts;
   };
+  const summarise = (members: T[] | undefined) => (members?.length ? aggregate(kind, members.map((row) => readValue(value, row))) : null);
+  const overall = bucket(data);
   const pivotRows: PivotRow[] = leaves.map((leaf) => {
+    const parts = bucket(leaf.rows);
     const record: PivotRow = { id: leaf.path.join("/"), __total: summarise(leaf.rows) };
     rows.forEach((column, i) => { record[`r:${column.key}`] = leaf.path[i]; });
-    for (const head of heads) record[`c:${head}`] = summarise(leaf.rows, head);
+    for (const head of heads) record[`c:${head}`] = summarise(parts.get(head));
     return record;
   });
   const number = (key: string, header: ReactNode, footerValue: unknown): Column<PivotRow> => ({
@@ -238,13 +258,16 @@ export function pivot<T>(data: T[], { rows, columns: across, value, aggregate: k
     header,
     type: "number",
     align: "right",
+    scale: value.scale,
+    // The grand figure, so exports get the same total row the screen shows.
+    aggregate: () => footerValue,
     format: value.format as Column<PivotRow>["format"],
     cell: (row) => (isBlank(row[key]) ? "" : value.format ? value.format(row[key], data[0]) : String(row[key])),
     footer: isBlank(footerValue) ? "" : value.format ? value.format(footerValue, data[0]) : String(footerValue),
   });
   const pivotColumns: Column<PivotRow>[] = [
     ...rows.map((column): Column<PivotRow> => ({ key: `r:${column.key}`, header: column.header, footer: rows[0] === column ? totalLabel : undefined })),
-    ...heads.map((head) => number(`c:${head}`, head, summarise(data, head))),
+    ...heads.map((head) => number(`c:${head}`, columnLabel ? columnLabel(head) : head, summarise(overall.get(head)))),
     number("__total", totalLabel, summarise(data)),
   ];
   return { columns: pivotColumns, rows: pivotRows };

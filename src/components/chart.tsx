@@ -206,7 +206,7 @@ function Grid({ ticks, y, left, right, short, zero }: { ticks: number[]; y: (v: 
 
 /** Thins category labels until they stop colliding. */
 function labelStep(slot: number, longest: number) {
-  return Math.max(1, Math.ceil((longest * 6.4 + 10) / Math.max(1, slot)));
+  return Math.max(1, Math.ceil((longest * 6.6 + 14) / Math.max(1, slot)));
 }
 
 export type BarChartProps<D> = ChartBase<D> & {
@@ -241,7 +241,11 @@ export function BarChart<D>(props: BarChartProps<D>) {
         const band = (horizontal ? bottom - top : right - left) / Math.max(1, data.length);
         const groups = stacked ? 1 : series.length;
         const thick = Math.min(MAX_BAR, Math.max(2, (band * 0.72 - (groups - 1) * 2) / groups));
-        const step = labelStep(band, longest);
+        // A few categories all keep a label, shortened to fit; many thin out instead.
+        const few = !horizontal && data.length <= 12;
+        const step = few ? 1 : labelStep(band, longest);
+        const room = Math.max(3, Math.floor((band - 6) / 6.4));
+        const shorten = (text: string) => (few && text.length > room ? `${text.slice(0, room - 1)}…` : text);
         const onMove = (e: PointerEvent<SVGSVGElement>) => {
           const box = e.currentTarget.getBoundingClientRect();
           const px = e.clientX - box.left;
@@ -293,7 +297,7 @@ export function BarChart<D>(props: BarChartProps<D>) {
                     {horizontal ? (
                       <text className="bt-chart-tick" x={left - 8} y={centre} dy="0.32em" textAnchor="end">{x(d).length > 22 ? `${x(d).slice(0, 21)}…` : x(d)}</text>
                     ) : index % step === 0 ? (
-                      <text className="bt-chart-tick" x={centre} y={bottom + 16} textAnchor="middle">{x(d)}</text>
+                      <text className="bt-chart-tick" x={centre} y={bottom + 16} textAnchor="middle">{shorten(x(d))}</text>
                     ) : null}
                   </g>
                 );
@@ -379,7 +383,7 @@ export function LineChart<D>(props: LineChartProps<D>) {
           <>
             <svg width={width} height={height} onPointerMove={onMove} onPointerLeave={() => setActive(null)} aria-hidden="true">
               <Grid ticks={ticks} y={py} left={left} right={right} short={short} zero />
-              {data.map((d, i) => (i % step === 0 ? <text key={i} className="bt-chart-tick" x={px(i)} y={bottom + 16} textAnchor={i === 0 ? "start" : "middle"}>{x(d)}</text> : null))}
+              {data.map((d, i) => (i % step === 0 ? <text key={i} className="bt-chart-tick" x={px(i)} y={bottom + 16} textAnchor="middle">{x(d)}</text> : null))}
               {area ? series.flatMap((s, i) => runsOf(cumulative[i]).map((run) => {
                 // A gap in the data is a gap in the fill: each unbroken run closes on its own.
                 const base = stacked && i > 0 ? cumulative[i - 1] : null;

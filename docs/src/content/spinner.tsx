@@ -1,7 +1,18 @@
 import { useState } from "react";
-import { Button, Card, Loading, Spinner } from "btui";
+import { Button, Card, Loading, Spinner, TopLoader } from "btui";
 import { useText } from "../lib/i18n";
 import { definePage } from "../lib/schema";
+
+function PageChange() {
+  const t = useText();
+  const [active, setActive] = useState(false);
+  return (
+    <>
+      <TopLoader active={active} />
+      <Button onClick={() => { setActive(true); setTimeout(() => setActive(false), 1200); }}>{t({ tr: "Sayfa değiştir", en: "Change page" })}</Button>
+    </>
+  );
+}
 
 function Overview() {
   const t = useText();
@@ -90,6 +101,17 @@ export default definePage({
 <Loading>Message</Loading>`,
   examples: [
     {
+      id: "top-loader",
+      title: { tr: "Sayfa geçişi", en: "Page changes" },
+      body: { tr: "`TopLoader` pencerenin üstünde ince bir çubuk gösterir. `active` gecikmediği sürece hiçbir şey görünmez, göründüğünde de yanıp sönmez. Yönlendiricinin bekleme durumunu verin; `useTransition` kullanıyorsanız `isPending` tam karşılığıdır. Düğmeye basıp deneyin.", en: "`TopLoader` shows a thin bar along the top of the window. Nothing appears unless `active` lasts, and once shown it never just blinks. Pass your router's waiting state; with `useTransition`, `isPending` is exactly that. Press the button to try." },
+      example: {
+        Demo: PageChange,
+        code: `const [changing, startTransition] = useTransition();
+
+<TopLoader active={changing} delay={120} minDuration={320} />`,
+      },
+    },
+    {
       id: "sizes",
       title: { tr: "Boyutlar", en: "Sizes" },
       body: { tr: "`size` piksel cinsindendir, verilmezse 22px olur. Metin satırında 16, boş panelin ortasında 32 iyi çalışır. Çizgi kalınlığı 3px sabittir.", en: "`size` is in pixels and defaults to 22px. 16 works in a line of text and 32 in the middle of an empty panel. The stroke stays at 3px." },
@@ -143,6 +165,14 @@ export default definePage({
       props: [
         { name: "size", type: "number", default: "22", description: { tr: "Genişlik ve yükseklik, piksel", en: "Width and height in pixels" } },
         { name: "label", type: "string", default: "locale.loading", description: { tr: "Ekran okuyucunun duyurduğu ad", en: "Name announced by screen readers" } },
+      ],
+    },
+    {
+      name: "TopLoader",
+      props: [
+        { name: "active", type: "boolean", required: true, description: { tr: "Sonraki ekran yoldayken `true`", en: "`true` while the next screen is on its way" } },
+        { name: "delay", type: "number", default: "120", description: { tr: "Bu kadar milisaniye gizli kalır, kısa geçişlerde hiçbir şey görünmez", en: "Stays hidden this many milliseconds, so quick changes show nothing" } },
+        { name: "minDuration", type: "number", default: "320", description: { tr: "Görününce en az bu kadar kalır", en: "Once shown, stays at least this long" } },
       ],
     },
     {

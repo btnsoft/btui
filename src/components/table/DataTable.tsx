@@ -122,6 +122,8 @@ export type DataTableProps<T> = {
   /** Replaces the record counter on the left of the footer, such as with totals. */
   footerNote?: ReactNode;
   maxHeight?: number | string;
+  /** Runs down to the bottom of the page and scrolls inside. A number sets the gap left below it. Default gap is 20. */
+  fill?: boolean | number;
   className?: string;
 };
 
@@ -138,6 +140,7 @@ const MIN_WIDTH = 60;
 const UTILITY = { select: 42, detail: 38 };
 const OVERSCAN = 8;
 const HEADER_HEIGHT = 38;
+const MIN_FILL = 280;
 const ROW_HEIGHT = { comfortable: 41, compact: 29 };
 
 function initialSorts(sort: SortState | null | undefined) {
@@ -154,7 +157,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
     getChildren, hasChildren, loadChildren, defaultExpanded = false,
     defaultDensity = "comfortable", storageKey, initialState, onStateChange, pageSize, pageSizeOptions, server,
     sort, defaultSort = null, onSortChange, loading, empty, onRowClick, selectedKey, selectedKeys, onSelectionChange, bulkActions,
-    renderDetail, rowClassName, footerNote, maxHeight, className,
+    renderDetail, rowClassName, footerNote, maxHeight, fill, className,
   } = props;
   const virtual = props.virtual || !!dataSource;
   // A tree already has its hierarchy, so grouping it would only hide the column.
@@ -363,7 +366,10 @@ export function DataTable<T>(props: DataTableProps<T>) {
     return row === undefined ? { kind: "pending", index } : { kind: "row", row, key: getRowKey(row) };
   }, [dataSource, display, source.rowAt, getRowKey]);
 
-  const lineHeight = rowHeight ?? ROW_HEIGHT[compact ? "compact" : "comfortable"];
+  // Avatars, badges and themes all change how tall a row really is, so the first drawn row sets the measure.
+  // This value feeds the scroll arithmetic only: writing it back into the CSS would make rows grow on every pass.
+  const [measuredRow, setMeasuredRow] = useState<number | null>(null);
+  const lineHeight = rowHeight ?? measuredRow ?? ROW_HEIGHT[compact ? "compact" : "comfortable"];
   const hasDetails = !dataSource && display.some((d) => d.kind === "detail");
   const offsets = useMemo(() => {
     if (!virtual || !hasDetails) return null;
@@ -384,8 +390,22 @@ export function DataTable<T>(props: DataTableProps<T>) {
     });
   };
   useLayoutEffect(() => {
-    if (virtual && scroller.current?.clientHeight) setScroll((s) => ({ ...s, height: scroller.current!.clientHeight }));
+    const el = scroller.current;
+    if (!virtual || !el) return;
+    const read = () => { if (el.clientHeight) setScroll((s) => (s.height === el.clientHeight ? s : { ...s, height: el.clientHeight })); };
+    read();
+    // The area grows when late data arrives and when the window changes.
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(read);
+    observer.observe(el);
+    return () => observer.disconnect();
   }, [virtual]);
+
+  useLayoutEffect(() => {
+    if (!virtual || rowHeight) return;
+    const height = scroller.current?.querySelector("tbody tr[data-row]")?.getBoundingClientRect().height;
+    if (height && Math.abs(height - (measuredRow ?? 0)) > 0.25) setMeasuredRow(height);
+  });
 
   const offsetOf = useCallback((index: number) => (offsets ? offsets[index] : index * lineHeight), [offsets, lineHeight]);
   const indexAt = useCallback((y: number) => {
@@ -431,14 +451,14 @@ export function DataTable<T>(props: DataTableProps<T>) {
   // Plain tables size columns from content, so sorting or paging would shift them.
   // Once drawn the widths hold, as shares so the table still follows its container.
   const layoutKey = `${visible.map((c) => c.key).join("|")}:${compact}:${!!renderDetail}:${!!onSelectionChange}`;
-  const [locked, setLocked] = useState<{ key: string; shares: number[] } | null>(null);
+  const [locked, setLocked] = useState<{ key: string; shares: number[]; total: number } | null>(null);
   const lockedShares = locked?.key === layoutKey ? locked.shares : null;
   useLayoutEffect(() => {
     if (fixed || lockedShares || count === 0) return;
     const heads = Array.from(tableRef.current?.querySelectorAll<HTMLElement>("thead th") ?? []);
     const widthsNow = heads.map((th) => th.offsetWidth);
     const total = widthsNow.reduce((sum, w) => sum + w, 0);
-    if (total > 0) setLocked({ key: layoutKey, shares: widthsNow.map((w) => (w / total) * 100) });
+    if (total > 0) setLocked({ key: layoutKey, total, shares: widthsNow.map((w) => (w / total) * 100) });
   }, [fixed, lockedShares, count, layoutKey]);
 
   const selectable = !!onSelectionChange;
@@ -630,7 +650,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
         const value = readValue(visible[c], item.row);
         if (isBlank(value)) continue;
         cells++;
-        if (typeof value === "number") numbers.push(value);
+        if (typeof value === "number") numbers.push(value / (visible[c].scale ?? 1));
       }
     }
     return { cells, numbers };
@@ -711,13 +731,16 @@ export function DataTable<T>(props: DataTableProps<T>) {
     const column = visible[cell.c];
     const value = readValue(column, item.row);
     // Editors work on the raw value: `format` is for reading, and would be saved back as data.
-    const raw = isBlank(value) ? "" : value instanceof Date ? value.toISOString().slice(0, 10) : typeof value === "number" ? value.toLocaleString(t.lang, { useGrouping: false, maximumFractionDigits: 20 }) : String(value);
+    const raw = isBlank(value) ? "" : value instanceof Date ? value.toISOString().slice(0, 10) : typeof value === "number" ? (value / (column.scale ?? 1)).toLocaleString(t.lang, { useGrouping: false, maximumFractionDigits: 20 }) : String(value);
     setEditing({ ...cell, text: seed ?? raw });
     return true;
   }
 
   function coerce(column: Column<T>, text: string): unknown {
-    if (column.type === "number") return parseNumber(text, t.lang);
+    if (column.type === "number") {
+      const parsed = parseNumber(text, t.lang);
+      return parsed === null ? null : Math.round(parsed * (column.scale ?? 1) * 1e6) / 1e6;
+    }
     if (column.type === "boolean") return /^(1|true|evet|yes|doğru)$/i.test(text.trim());
     return text;
   }
@@ -1011,10 +1034,12 @@ export function DataTable<T>(props: DataTableProps<T>) {
     const sheetColumns: SheetColumn[] = cols.map((c) => ({ header: plainHeader(c), type: c.type, align: c.align, width: widths[c.key] ? Math.round(widths[c.key] / 7) : undefined }));
     const cell = (c: Column<T>, row: T): SheetCell => {
       const value = readValue(c, row);
-      if (typeof value === "number" || value instanceof Date || typeof value === "boolean") return value;
-      if (c.type === "number" && !isBlank(value) && !Number.isNaN(Number(value))) return Number(value);
+      if (typeof value === "number") return value / (c.scale ?? 1);
+      if (value instanceof Date || typeof value === "boolean") return value;
+      if (c.type === "number" && !isBlank(value) && !Number.isNaN(Number(value))) return Number(value) / (c.scale ?? 1);
       return c.type === "date" && !c.format ? (value as SheetCell) : textOf(c, row);
     };
+    const inUnits = (c: Column<T>, value: unknown): SheetCell => (typeof value === "number" ? value / (c.scale ?? 1) : (value as SheetCell));
     const data: SheetCell[][] = [];
     const outline: number[] = [];
     const boldRows = new Set<number>();
@@ -1022,14 +1047,14 @@ export function DataTable<T>(props: DataTableProps<T>) {
       for (const node of flattenTree(tree)) {
         outline.push(node.level);
         if (node.children.length) boldRows.add(data.length);
-        data.push(cols.map((c) => (node.children.length && c.aggregate ? (aggregateColumn(c, leafRows(node)) as SheetCell) : cell(c, node.row))));
+        data.push(cols.map((c) => (node.children.length && c.aggregate ? inUnits(c, aggregateColumn(c, leafRows(node))) : cell(c, node.row))));
       }
     } else if (grouped.length && !selectedOnly) {
       const walk = (nodes: GroupNode<T>[]) => {
         for (const node of nodes) {
           boldRows.add(data.length);
           outline.push(node.level);
-          data.push(cols.map((c, i) => (i === 0 ? `${node.value || g.blank} (${node.rows.length})` : (aggregateColumn(c, node.rows) as SheetCell))));
+          data.push(cols.map((c, i) => (i === 0 ? `${node.value || g.blank} (${node.rows.length})` : inUnits(c, aggregateColumn(c, node.rows)))));
           if (node.children) walk(node.children);
           else for (const row of node.rows) { outline.push(node.level + 1); data.push(cols.map((c) => cell(c, row))); }
         }
@@ -1039,7 +1064,8 @@ export function DataTable<T>(props: DataTableProps<T>) {
       for (const row of chosen) data.push(cols.map((c) => cell(c, row)));
     }
     const totalsOver = tree && !selectedOnly ? countable : chosen;
-    const summary = cols.some((c) => c.aggregate) ? cols.map((c, i) => (c.aggregate ? (aggregateColumn(c, totalsOver) as SheetCell) : i === 0 ? g.total : null)) : undefined;
+    const plainFooter = (c: Column<T>) => (typeof c.footer === "string" || typeof c.footer === "number" ? c.footer : undefined);
+    const summary = cols.some((c) => c.aggregate || plainFooter(c) !== undefined) ? cols.map((c, i) => (c.aggregate ? inUnits(c, aggregateColumn(c, totalsOver)) : plainFooter(c) ?? (i === 0 ? g.total : null))) : undefined;
     const name = exportFileName;
     if (kind === "xlsx") {
       const sheetName = typeof title === "string" ? title : undefined;
@@ -1048,6 +1074,36 @@ export function DataTable<T>(props: DataTableProps<T>) {
       download(buildCsv(sheetColumns, data), `${name}.csv`, "text/csv;charset=utf-8");
     }
   }
+
+  // Measured rather than guessed: what sits above the table differs on every screen.
+  const card = useRef<HTMLElement>(null);
+  const [filler, setFiller] = useState(0);
+  const fillGap = typeof fill === "number" ? fill : 20;
+  useLayoutEffect(() => {
+    const el = card.current;
+    if (!fill || !el) return;
+    const measure = () => {
+      if (window.matchMedia("(max-width: 800px)").matches) { el.style.height = ""; return; }
+      const page = el.closest<HTMLElement>(".bt-content");
+      const top = page ? el.getBoundingClientRect().top - page.getBoundingClientRect().top + page.scrollTop : el.getBoundingClientRect().top + window.scrollY;
+      el.style.height = `${Math.max(MIN_FILL, (page?.clientHeight ?? window.innerHeight) - top - fillGap)}px`;
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    // Whatever sits above the table can change height after this runs: charts, alerts, late data.
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
+    if (el.parentElement) observer?.observe(el.parentElement);
+    return () => { window.removeEventListener("resize", measure); observer?.disconnect(); };
+  }, [fill, fillGap]);
+
+  // With few rows the totals row still belongs at the bottom of the card.
+  useLayoutEffect(() => {
+    const area = scroller.current;
+    const table = tableRef.current;
+    if (!fill || !area || !table || virtual || !table.tFoot) { if (filler) setFiller(0); return; }
+    const next = Math.max(0, area.clientHeight - (table.offsetHeight - filler));
+    if (Math.abs(next - filler) > 1) setFiller(next);
+  });
 
   const hasBand = !!(title || chips || actions || bulkActions || searchable || exportable);
   const showControls = controls ?? hasBand;
@@ -1261,6 +1317,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
               <span className="bt-tree-text">{shown}</span>
             </span>
           ) : shown;
+          const marked = c.icon && !(node && i === 0) ? <span className="bt-cell-mark">{c.icon(row)}<span>{value}</span></span> : value;
           const handleHere = hasEditable && !!bounds && !editing && !fillTarget && r === bounds.bottom && i === bounds.right;
           const inFill = !!fillArea && !!bounds && (fillArea.axis === "rows" ? r >= fillArea.from && r <= fillArea.to && i >= bounds.left && i <= bounds.right : i >= fillArea.from && i <= fillArea.to && r >= bounds.top && r <= bounds.bottom);
           return (
@@ -1279,7 +1336,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
               onDoubleClick={() => startEdit({ r, c: i })}
               {...pinAttrs(c)}
             >
-              {isEditing ? renderEditor(c) : value}
+              {isEditing ? renderEditor(c) : marked}
               {handleHere ? <span className="bt-fill-handle" aria-hidden="true" title={g.fillHint} /> : null}
             </td>
           );
@@ -1319,7 +1376,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
         const item = cell ? at(cell.r) : null;
         setMenuTarget(cell && item?.kind === "row" ? { row: item.row, column: visible[cell.c] } : null);
       }}
-      style={maxHeight !== undefined ? { maxHeight } : virtual ? { maxHeight: 520 } : undefined}
+      style={fill ? undefined : maxHeight !== undefined ? { maxHeight } : virtual ? { maxHeight: 520 } : undefined}
     >
       <table
         ref={tableRef}
@@ -1335,7 +1392,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
         data-locked={flag(!fixed && lockedShares)}
         data-virtual={flag(virtual)}
         data-interactive={flag(interactive)}
-        style={{ "--bt-row-h": `${lineHeight}px`, minWidth: fixed ? visible.reduce((sum, c) => sum + widthOf(c), utilityWidth) : undefined } as CSSProperties}
+        style={{ "--bt-row-h": `${rowHeight ?? ROW_HEIGHT[compact ? "compact" : "comfortable"]}px`, minWidth: fixed ? visible.reduce((sum, c) => sum + widthOf(c), utilityWidth) : lockedShares ? locked?.total : undefined } as CSSProperties}
         onKeyDown={onGridKey}
         onPaste={onPaste}
         onPointerDown={onCellPointerDown}
@@ -1421,6 +1478,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
             <>
               {virtual && first > 0 ? <tr aria-hidden="true" data-spacer=""><td colSpan={span} style={{ height: offsetOf(first), padding: 0, border: 0 }} /></tr> : null}
               {rendered.map((node, i) => <Fragment key={i}>{node}</Fragment>)}
+              {filler > 0 ? <tr aria-hidden="true" data-spacer=""><td colSpan={span} style={{ height: filler, padding: 0, border: 0 }} /></tr> : null}
               {virtual && last < count ? <tr aria-hidden="true" data-spacer=""><td colSpan={span} style={{ height: totalHeight - offsetOf(last), padding: 0, border: 0 }} /></tr> : null}
             </>
           )}
@@ -1443,7 +1501,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
   );
 
   return (
-    <section className={cx("bt-table-card", className)} data-density={compact ? "compact" : "comfortable"}>
+    <section ref={card} className={cx("bt-table-card", className)} data-density={compact ? "compact" : "comfortable"} data-fill={flag(fill)}>
       {hasBand || showControls ? (
         <div className="bt-band" data-tone={bandTone}>
           {title ? (
@@ -1544,9 +1602,9 @@ export function DataTable<T>(props: DataTableProps<T>) {
           <SelectionChart {...chart} />
         </Modal>
       ) : null}
-      {paged || footerNote || virtual || stats ? (
+      {paged || footerNote || virtual || stats || fill ? (
         <div className="bt-table-foot">
-          <span>{statusBar ?? footerNote ?? (paged || virtual ? t.records(from, to, totalRows) : null)}</span>
+          <span>{statusBar ?? footerNote ?? (tree ? t.records(count ? 1 : 0, count, count) : paged || virtual || fill ? t.records(from, to, totalRows) : null)}</span>
           <span className="bt-table-foot-end">
             {pageSizeOptions && paged ? (
               <Select size="sm" aria-label={g.rowsPerPage} value={String(size)} onChange={(next) => { setOwnPageSize(Number(next)); setOwnPage(1); server?.onPageSizeChange?.(Number(next)); }} options={pageSizeOptions.map((n) => ({ value: String(n), label: g.perPage(n) }))} />

@@ -8,7 +8,7 @@ export { BtuiProvider, Drawer, Menu, MenuGroup, MenuItem, MenuSeparator, Modal, 
 export { AppShell, Breadcrumb, FilterBar, Page, PageHeader, Sidebar, Topbar, TopbarSearch, TopbarSeparator, TopbarSpacer, type AppShellProps, type BreadcrumbProps, type Crumb, type FilterBarProps, type NavGroup, type NavItem, type PageHeaderProps, type SidebarProps, type TopbarSearchProps } from "./components/shell";
 export * from "./components/table";
 export { AreaChart, BarChart, DataBar, DonutChart, LineChart, Sparkline, niceTicks, type BarChartProps, type ChartSeries, type DonutChartProps, type LineChartProps, type SparklineProps } from "./components/chart";
-export { Accordion, Alert, Popover, Progress, Skeleton, type AccordionItem, type AccordionProps, type AlertProps, type PopoverProps, type ProgressProps, type SkeletonProps } from "./components/feedback";
+export { Accordion, Alert, Popover, Progress, Skeleton, TopLoader, type AccordionItem, type AccordionProps, type AlertProps, type PopoverProps, type ProgressProps, type SkeletonProps, type TopLoaderProps } from "./components/feedback";
 export { Calendar, DatePicker, DateRangePicker, datePresets, type CalendarProps, type DatePickerProps, type DateRange, type DateRangePickerProps, type DateRangePreset, type IsoDate } from "./components/date";
 export { formatDate, parseDate, todayIso } from "./date";
 export { FileDropzone, type FileDropzoneProps } from "./components/file-dropzone";

@@ -347,9 +347,9 @@ export function datePresets(labels: { today: string; yesterday: string; last7: s
     { label: labels.yesterday, range: () => ({ start: addDays(today, -1), end: addDays(today, -1) }) },
     { label: labels.last7, range: () => ({ start: addDays(today, -6), end: today }) },
     { label: labels.last30, range: () => ({ start: addDays(today, -29), end: today }) },
-    { label: labels.thisMonth, range: () => ({ start: startOfMonth(today), end: endOfMonth(today) }) },
+    { label: labels.thisMonth, range: () => ({ start: startOfMonth(today), end: today }) },
     { label: labels.lastMonth, range: () => ({ start: lastMonth, end: endOfMonth(lastMonth) }) },
-    { label: labels.thisYear, range: () => ({ start: `${today.slice(0, 4)}-01-01`, end: `${today.slice(0, 4)}-12-31` }) },
+    { label: labels.thisYear, range: () => ({ start: `${today.slice(0, 4)}-01-01`, end: today }) },
   ];
 }
 

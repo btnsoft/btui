@@ -11,7 +11,7 @@ const GROUPS = [
 ];
 
 const THEMES = [
-  { id: "hoki", name: "Hoki", vars: {} },
+  { id: "navy", name: "Navy", vars: {} },
   { id: "pine", name: "Pine", vars: { "--bt-accent": "#2f7d6b", "--bt-accent-strong": "#1f5f50", "--bt-accent-soft": "#dfeeea", "--bt-accent-text": "#1f5f50" } },
   { id: "wine", name: "Wine", vars: { "--bt-accent": "#8a3b50", "--bt-accent-strong": "#6d2a3d", "--bt-accent-soft": "#f3e4e8", "--bt-accent-text": "#6d2a3d" } },
   { id: "graphite", name: "Graphite", vars: { "--bt-accent": "#4b5563", "--bt-accent-strong": "#1f2937", "--bt-accent-soft": "#e7e9ec", "--bt-accent-text": "#1f2937" } },

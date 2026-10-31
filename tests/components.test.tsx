@@ -1004,3 +1004,41 @@ describe("second review", () => {
     expect(screen.getByText("1-5 / 5 kayıt")).toBeInTheDocument();
   });
 });
+
+describe("scale", () => {
+  type Row = { id: number; amount: number };
+  const rows: Row[] = [{ id: 1, amount: 150000 }, { id: 2, amount: 2500000 }];
+  const column: GridColumn<Row> = { key: "amount", header: "Tutar", type: "number", scale: 100 };
+
+  it("filters in the unit people see", () => {
+    const found = filterRows(rows, [column], { amount: { type: "number", op: ">=", value: 20000 } }, "", "tr");
+    expect(found.map((r) => r.id)).toEqual([2]);
+  });
+
+  it("sums a selection in that unit and edits it too", async () => {
+    const user = userEvent.setup();
+    const onEdit = vi.fn();
+    const cols: Column<Row>[] = [{ ...column, editable: true, format: (v) => `${(v as number) / 100} TL` }];
+    const { container } = render(<BtuiProvider><DataTable cellSelection controls={false} columns={cols} rows={rows} getRowKey={(r) => r.id} onCellEdit={onEdit} /></BtuiProvider>);
+    const cells = screen.getAllByRole("gridcell");
+    fireEvent.pointerDown(cells[0], { button: 0 });
+    fireEvent.pointerOver(cells[1]);
+    fireEvent.pointerUp(window);
+    expect(container.querySelector(".bt-status-bar")).toHaveTextContent("Toplam: 26.500");
+    await user.dblClick(cells[0]);
+    const box = container.querySelector<HTMLInputElement>(".bt-cell-edit")!;
+    expect(box.value).toBe("1500");
+    await user.clear(box);
+    await user.type(box, "12,50{Enter}");
+    expect(onEdit).toHaveBeenCalledWith([expect.objectContaining({ value: 1250, previous: 150000 })]);
+  });
+});
+
+describe("virtual row measure", () => {
+  it("does not feed the measured height back into the rows", () => {
+    const rect = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(() => ({ height: 36, width: 100, top: 0, bottom: 36, left: 0, right: 100, x: 0, y: 0, toJSON: () => ({}) }));
+    const { container } = render(<DataTable virtual columns={[{ key: "id", header: "No" }]} rows={[1, 2, 3].map((id) => ({ id }))} getRowKey={(r) => r.id} />);
+    expect(container.querySelector("table")!.style.getPropertyValue("--bt-row-h")).toBe("41px");
+    rect.mockRestore();
+  });
+});

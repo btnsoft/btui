@@ -137,3 +137,27 @@ test("bant ciplerinde yazi ve sayi her durumda okunur", async ({ page }) => {
     await chips.nth(i).click();
   }
 });
+
+/** Every pixel of a virtual list's viewport must hold a row, wherever it is scrolled to. */
+async function viewportIsFull(page: Page, table: string) {
+  const area = page.locator(`${table} .bt-table-scroll`).first();
+  await area.scrollIntoViewIfNeeded();
+  for (const share of [0, 0.37, 0.71]) {
+    await area.evaluate((el, at) => { el.scrollTop = (el.scrollHeight - el.clientHeight) * at; }, share);
+    await page.waitForTimeout(250);
+    const gap = await area.evaluate((el) => {
+      const view = el.getBoundingClientRect();
+      const head = el.querySelector("thead th")!.getBoundingClientRect().bottom;
+      const rows = Array.from(el.querySelectorAll("tbody tr:not([data-spacer])")).map((row) => row.getBoundingClientRect());
+      const top = Math.min(...rows.map((b) => b.top));
+      const bottom = Math.max(...rows.map((b) => b.bottom));
+      return { above: Math.max(0, top - head), below: Math.max(0, view.bottom - bottom) };
+    });
+    expect(gap, `kaydirma ${share}`).toEqual({ above: 0, below: 0 });
+  }
+}
+
+test("sanal tablo goruntu alanini her konumda doldurur", async ({ page }) => {
+  await open(page, "tr", "data-grid", "light");
+  await viewportIsFull(page, '.d-demo:has(.bt-table[data-virtual])');
+});

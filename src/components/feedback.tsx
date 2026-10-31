@@ -1,4 +1,4 @@
-import { useState, type ComponentPropsWithoutRef, type ReactElement, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ComponentPropsWithoutRef, type ReactElement, type ReactNode } from "react";
 import { Accordion as BaseAccordion } from "@base-ui/react/accordion";
 import { Popover as BasePopover } from "@base-ui/react/popover";
 import { Progress as BaseProgress } from "@base-ui/react/progress";
@@ -66,6 +66,32 @@ export type SkeletonProps = ComponentPropsWithoutRef<"span"> & { width?: number 
 
 export function Skeleton({ width, height, className, style, ...rest }: SkeletonProps) {
   return <span aria-hidden="true" className={cx("bt-skeleton", className)} style={{ width, height, ...style }} {...rest} />;
+}
+
+export type TopLoaderProps = {
+  /** True while the next screen is on its way. */
+  active: boolean;
+  /** Stays hidden for this many milliseconds, so quick changes show nothing. */
+  delay?: number;
+  /** Once shown, stays this long, so it never just blinks. */
+  minDuration?: number;
+};
+
+/** A thin bar along the top of the window while a page changes. */
+export function TopLoader({ active, delay = 120, minDuration = 320 }: TopLoaderProps) {
+  const t = useLocale();
+  const [shown, setShown] = useState(false);
+  const since = useRef(0);
+  useEffect(() => {
+    if (active) {
+      const timer = window.setTimeout(() => { since.current = performance.now(); setShown(true); }, delay);
+      return () => window.clearTimeout(timer);
+    }
+    if (!shown) return;
+    const timer = window.setTimeout(() => setShown(false), Math.max(0, minDuration - (performance.now() - since.current)));
+    return () => window.clearTimeout(timer);
+  }, [active, delay, minDuration, shown]);
+  return shown ? <div className="bt-top-loader" role="progressbar" aria-label={t.loading}><span /></div> : null;
 }
 
 export type PopoverProps = {
