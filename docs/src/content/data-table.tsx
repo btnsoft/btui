@@ -506,7 +506,7 @@ export default definePage({
     {
       id: "basic",
       title: { tr: "Temel kullanım", en: "Basic" },
-      body: { tr: "Üç zorunlu prop yeter: `columns`, `rows`, `getRowKey`. `cell` verilmezse hücre, satırın `key` adlı alanını gösterir. Bant içeriği yoksa bant hiç çizilmez.", en: "Three required props are enough: `columns`, `rows` and `getRowKey`. Without `cell`, a column shows the row field named by `key`. With no band content the band is not drawn at all." },
+      body: { tr: "Üç zorunlu özellik yeter: `columns`, `rows`, `getRowKey`. `cell` verilmezse hücre, satırın `key` adlı alanını gösterir. Bant içeriği yoksa bant hiç çizilmez.", en: "Three required props are enough: `columns`, `rows` and `getRowKey`. Without `cell`, a column shows the row field named by `key`. With no band content the band is not drawn at all." },
       example: {
         Demo: Basic,
         block: true,
@@ -720,7 +720,7 @@ const [open, setOpen] = useState(false);
     {
       id: "bulk",
       title: { tr: "Çoklu seçim ve toplu işlem", en: "Multi-select and bulk actions" },
-      body: { tr: "`selectedKeys` ile `onSelectionChange` kutu sütununu açar. Satır seçilince bant, hızlı filtrelerin yerine seçim sayısını ve `bulkActions` içeriğini gösterir. Başlıktaki kutu yalnız görünen sayfayı seçer; seçim sayfalar arasında korunur, sayaç da tüm sayfaları sayar. Silmeyi `useConfirm` ile doğrulatın.", en: "`selectedKeys` with `onSelectionChange` turns on the checkbox column. Once rows are checked, the band swaps its chips for the selection count and `bulkActions`. The header checkbox covers the visible page only; selection survives paging and the counter includes every page. Confirm deletion with `useConfirm`." },
+      body: { tr: "`selectedKeys` ile `onSelectionChange` kutu sütununu açar. Satır seçilince bant, hızlı filtrelerin yerine seçim sayısını ve `bulkActions` içeriğini gösterir. Başlıktaki kutu yalnız görünen sayfayı seçer; seçim sayfalar arasında korunur, sayaç da tüm sayfaları sayar. Bir sayfanın tamamı işaretlenince bantta \"12 kaydın tümünü seç\" düğmesi çıkar ve seçimi bütün sayfalara yayar; düğme sayfalı tabloda ve `bulkActions` varken görünür, sunucu kipinde görünmez. Silmeyi `useConfirm` ile doğrulatın.", en: "`selectedKeys` with `onSelectionChange` turns on the checkbox column. Once rows are checked, the band swaps its chips for the selection count and `bulkActions`. The header checkbox covers the visible page only; selection survives paging and the counter includes every page. Once a whole page is checked, a \"Select all 12 records\" button appears in the band and spreads the selection to every page; it shows on a paged table with `bulkActions`, and not in server mode. Confirm deletion with `useConfirm`." },
       example: {
         Demo: Bulk,
         block: true,
@@ -785,7 +785,7 @@ const [open, setOpen] = useState(false);
     {
       id: "server",
       title: { tr: "Sunucu kipi", en: "Server mode" },
-      body: { tr: "`server` verildiğinde `rows` yalnız geçerli sayfadır ve tablo hiçbir şeyi kendisi dilimlemez ya da sıralamaz. Sayfa değişimini `onPageChange`, sıralamayı `onSortChange` bildirir; `onSortChange` yoksa başlıklar sıralanmaz. Yeni sıralamada sayfayı 1'e siz döndürün. `pageSize` değerini mutlaka verin: verilmezse sayfa boyu `rows.length` sayılır ve kısa son sayfada toplam sayfa sayısı bozulur. Bu örnek 600 ms geciken gerçek bir istek gibi çalışır; banttaki adres her seferinde güncellenir, geç gelen yanıtlar da `stale` bayrağıyla atılır.", en: "With `server`, `rows` is only the current page and the table neither slices nor sorts anything. `onPageChange` reports paging and `onSortChange` reports sorting; without `onSortChange` the headers do not sort. Go back to page 1 yourself on a new sort. Always pass `pageSize`: otherwise the page size is taken from `rows.length` and a short last page breaks the page count. This example behaves like a real request delayed by 600 ms; the address in the band updates each time and late responses are dropped through the `stale` flag." },
+      body: { tr: "`server` verildiğinde `rows` yalnız geçerli sayfadır ve tablo hiçbir şeyi kendisi dilimlemez ya da sıralamaz. Sayfa değişimini `onPageChange`, sıralamayı `onSortChange` bildirir; `onSortChange` yoksa başlıklar sıralanmaz. Yeni sıralamada sayfayı 1'e siz döndürün. `pageSize` artık zorunlu değildir: tablo gördüğü en büyük sayfayı hatırlar, kısa son sayfa sayfa sayısını bozmaz. Yine de biliyorsanız verin; kullanıcı doğrudan son sayfadan başlarsa tablonun gördüğü tek sayfa odur. Bu örnek 600 ms geciken gerçek bir istek gibi çalışır; banttaki adres her seferinde güncellenir, geç gelen yanıtlar da `stale` bayrağıyla atılır.", en: "With `server`, `rows` is only the current page and the table neither slices nor sorts anything. `onPageChange` reports paging and `onSortChange` reports sorting; without `onSortChange` the headers do not sort. Go back to page 1 yourself on a new sort. `pageSize` is no longer essential: the table remembers the largest page it has seen, so a short last page does not break the page count. Pass it anyway when you know it; if someone starts straight on the last page, that is the only page the table has seen. This example behaves like a real request delayed by 600 ms; the address in the band updates each time and late responses are dropped through the `stale` flag." },
       example: {
         Demo: Server,
         block: true,
@@ -861,7 +861,7 @@ function OrdersTable() {
         { name: "bandTone", type: '"plain" | "accent"', default: '"plain"', description: { tr: "`accent` bandı marka rengiyle doldurur", en: "`accent` fills the band with the brand colour" } },
         { name: "controls", type: "boolean", description: { tr: "Sütun ve yoğunluk düğmeleri. Verilmezse bant içeriği varken açılır", en: "Column and density buttons. When omitted, on whenever the band has content" } },
         { name: "storageKey", type: "string", description: { tr: "Sütunları, genişlikleri, sıralamayı, filtreleri ve yoğunluğu saklayan `localStorage` anahtarı", en: "`localStorage` key that keeps columns, widths, sort, filters and density" } },
-        { name: "pageSize", type: "number", description: { tr: "Sayfa başına satır. Verilmezse tablo sayfalanmaz; sunucu kipinde `rows.length` sayılır", en: "Rows per page. When omitted there is no paging; in server mode `rows.length` is used" } },
+        { name: "pageSize", type: "number", description: { tr: "Sayfa başına satır. Verilmezse tablo sayfalanmaz; sunucu kipinde görülen en büyük sayfa kullanılır", en: "Rows per page. When omitted there is no paging; in server mode the largest page seen is used" } },
         { name: "defaultDensity", type: '"comfortable" | "compact"', default: '"comfortable"', description: { tr: "Başlangıç yoğunluğu. `storageKey` altındaki kayıt önceliklidir", en: "Starting density. A value saved under `storageKey` wins" } },
         { name: "server", type: "{ total: number; page: number; onPageChange: (page: number) => void }", description: { tr: "Sunucu kipi. `rows` geçerli sayfa olur, sıralama uygulanmaz", en: "Server mode. `rows` becomes the current page and sorting is not applied" } },
         { name: "sort", type: "SortState | null", description: { tr: "Denetimli sıralama. `null` sırasız demektir", en: "Controlled sort. `null` means unsorted" } },
@@ -873,7 +873,7 @@ function OrdersTable() {
         { name: "selectedKey", type: "string | number | null", description: { tr: "Vurgulanan tek satırın anahtarı", en: "Key of the single highlighted row" } },
         { name: "selectedKeys", type: "Array<string | number>", default: "[]", description: { tr: "İşaretli satırların anahtarları", en: "Keys of the checked rows" } },
         { name: "onSelectionChange", type: "(keys: Array<string | number>) => void", description: { tr: "Kutu sütununu açar", en: "Turns on the checkbox column" } },
-        { name: "bulkActions", type: "ReactNode", description: { tr: "Satır işaretliyken `chips` yerine bantta gösterilir", en: "Replaces `chips` in the band while rows are checked" } },
+        { name: "bulkActions", type: "ReactNode", description: { tr: "Satır işaretliyken `chips` yerine bantta gösterilir. Sayfa tamamen seçilince tümünü seçme düğmesi de burada çıkar", en: "Replaces `chips` in the band while rows are checked. Once a page is fully checked, the select all button shows here too" } },
         { name: "renderDetail", type: "(row: T) => ReactNode", description: { tr: "Açılır ayrıntı satırının içeriği", en: "Content of the expandable detail row" } },
         { name: "rowClassName", type: "(row: T) => string | undefined", description: { tr: "Satıra koşullu sınıf ekler", en: "Adds a conditional class to a row" } },
         { name: "footerNote", type: "ReactNode", description: { tr: "Alt şeridin solu. Doluysa kayıt sayacının yerini alır", en: "Left side of the bottom strip. Replaces the record counter when set" } },

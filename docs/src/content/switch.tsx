@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type CSSProperties, type FormEvent } from "react";
 import { Button, Field, Switch } from "btui";
 import { useText } from "../lib/i18n";
 import { definePage } from "../lib/schema";
@@ -46,7 +46,27 @@ function Pending() {
       setBusy(false);
     }, 900);
   };
-  return <Switch checked={on} disabled={busy} onChange={change} label={busy ? t({ tr: "Kaydediliyor…", en: "Saving…" }) : t({ tr: "Bayi portalı açık", en: "Dealer portal is open" })} />;
+  return <Switch checked={on} loading={busy} onChange={change} label={busy ? t({ tr: "Kaydediliyor…", en: "Saving…" }) : t({ tr: "Bayi portalı açık", en: "Dealer portal is open" })} />;
+}
+
+function Colours() {
+  const t = useText();
+  return (
+    <div style={{ "--bt-switch-on": "var(--bt-accent-strong)", "--bt-switch-off": "var(--bt-muted)" } as CSSProperties}>
+      <Switch defaultChecked onLabel={t({ tr: "Yayında", en: "Live" })} offLabel={t({ tr: "Taslak", en: "Draft" })} aria-label={t({ tr: "Fiyat listesi durumu", en: "Price list status" })} />
+    </div>
+  );
+}
+
+function Focus() {
+  const t = useText();
+  const control = useRef<HTMLElement>(null);
+  return (
+    <>
+      <Switch ref={control} label={t({ tr: "Kampanya e-postaları", en: "Campaign emails" })} />
+      <Button size="sm" onClick={() => control.current?.focus()}>{t({ tr: "Anahtara odaklan", en: "Focus the switch" })}</Button>
+    </>
+  );
 }
 
 function Disabled() {
@@ -137,7 +157,7 @@ export default definePage({
     {
       id: "pending",
       title: { tr: "Sunucu yanıtını beklemek", en: "Waiting for the server" },
-      body: { tr: "Değişiklik sunucuya gidiyorsa `checked` değerini yanıt gelince güncelleyin ve bu sırada `disabled` verin. Bileşenin `loading` durumu yoktur, etiket metniyle geri bildirim verin. Anahtara basıp deneyin.", en: "If the change goes to the server, update `checked` once the reply arrives and pass `disabled` in the meantime. The component has no `loading` state, so give feedback through the label. Press the switch to try." },
+      body: { tr: "Değişiklik sunucuya gidiyorsa `checked` değerini yanıt gelince güncelleyin ve bu sırada `loading` verin. Anahtar yerinde kalır, girdi almaz, soluk görünür ve `aria-busy` taşır. Etiketle de geri bildirim verin. Anahtara basıp deneyin.", en: "If the change goes to the server, update `checked` once the reply arrives and pass `loading` in the meantime. The switch stays put, takes no input, fades and carries `aria-busy`. Give feedback through the label too. Press the switch to try." },
       example: {
         Demo: Pending,
         code: `const change = async (next) => {
@@ -147,8 +167,25 @@ export default definePage({
   setBusy(false);
 };
 
-<Switch checked={on} disabled={busy} onChange={change} label={busy ? "Saving…" : "Dealer portal is open"} />`,
+<Switch checked={on} loading={busy} onChange={change} label={busy ? "Saving…" : "Dealer portal is open"} />`,
       },
+    },
+    {
+      id: "colours",
+      title: { tr: "Yazılı anahtar renkleri", en: "Labelled switch colours" },
+      body: { tr: "Yazılı anahtarın kırmızı ve yeşili her zaman doğru anlam taşımaz: taslak bir hata değildir. `--bt-switch-on` ve `--bt-switch-off` değişkenleri bu iki rengi değiştirir. Üst öğede ya da temada tanımlayın. Yazısız anahtar bu değişkenleri kullanmaz.", en: "The red and green of a labelled switch do not always mean the right thing: a draft is not an error. `--bt-switch-on` and `--bt-switch-off` change the two colours. Define them on a parent or in the theme. A plain switch does not use them." },
+      example: { Demo: Colours, code: `<div style={{ "--bt-switch-on": "var(--bt-accent-strong)", "--bt-switch-off": "var(--bt-muted)" }}>
+  <Switch defaultChecked onLabel="Live" offLabel="Draft" aria-label="Price list status" />
+</div>` },
+    },
+    {
+      id: "ref",
+      title: { tr: "Ref ile odak", en: "Focus through a ref" },
+      body: { tr: "`ref` anahtarın kök öğesine iletilir. Hatalı bir formda odağı doğrudan anahtara taşımak için kullanın.", en: "`ref` reaches the root element of the switch. Use it to move focus straight to the switch on a form with an error." },
+      example: { Demo: Focus, code: `const control = useRef<HTMLElement>(null);
+
+<Switch ref={control} label="Campaign emails" />
+<Button size="sm" onClick={() => control.current?.focus()}>Focus the switch</Button>` },
     },
     {
       id: "disabled",
@@ -194,6 +231,7 @@ export default definePage({
   a11y: [
     { tr: "`switch` rolü ve `aria-checked` hazır gelir.", en: "The `switch` role and `aria-checked` come built in." },
     { tr: "`label` yoksa `aria-label` şarttır. Yazılı anahtarda iç metin duruma göre değişir, kaydın adını söylemez; `aria-label` bunu tamamlar.", en: "Without `label`, `aria-label` is a must. In a labelled switch the inner text changes with the state and never names the record, which `aria-label` makes up for." },
+    { tr: "`loading` sırasında `aria-busy` eklenir ve anahtar kapalı olarak duyurulur; odak taşınmaz.", en: "`loading` adds `aria-busy` and the switch is announced as disabled; focus does not move." },
     { tr: "Yazılı anahtarda durum hem renk hem metinle anlatılır. Yazısız anahtarda etiket durumu değil ayarı anlatmalıdır: \"Bildirim açık\" yerine \"Bildirimler\".", en: "A labelled switch tells the state by both colour and text. On a plain switch the label should name the setting, not the state: \"Notices\" beats \"Notices are on\"." },
   ],
   keyboard: [
@@ -204,7 +242,7 @@ export default definePage({
   api: [
     {
       name: "Switch",
-      description: { tr: "Yerel öznitelikler ve ref iletilmez; yalnız aşağıdaki proplar geçerlidir.", en: "Native attributes and the ref are not forwarded; only the props below apply." },
+      description: { tr: "Ref kök öğeye iletilir. Yerel öznitelikler iletilmez; yalnız aşağıdaki özellikler geçerlidir.", en: "The ref reaches the root element. Native attributes are not forwarded; only the props below apply." },
       props: [
         { name: "checked", type: "boolean", description: { tr: "Denetimli durum", en: "Controlled state" } },
         { name: "defaultChecked", type: "boolean", default: "false", description: { tr: "Denetimsiz başlangıç durumu", en: "Uncontrolled initial state" } },
@@ -214,8 +252,9 @@ export default definePage({
         { name: "onLabel", type: "string", description: { tr: "Açıkken içeride yazan metin; `offLabel` ile birlikte verin", en: "Text inside while on; pass it with `offLabel`" } },
         { name: "offLabel", type: "string", description: { tr: "Kapalıyken içeride yazan metin; `onLabel` ile birlikte verin", en: "Text inside while off; pass it with `onLabel`" } },
         { name: "disabled", type: "boolean", default: "false", description: { tr: "Anahtarı kapatır", en: "Turns the switch off" } },
+        { name: "loading", type: "boolean", default: "false", description: { tr: "Kayıt beklenirken anahtar yerinde kalır, girdi almaz", en: "While a save is pending the switch stays put and takes no input" } },
         { name: "name", type: "string", description: { tr: "Form gönderiminde kullanılan ad", en: "Name used on form submission" } },
-        { name: "className", type: "string", description: { tr: "`label` verildiğinde dış öğeye eklenir; `label` yoksa uygulanmaz", en: "Added to the outer element when `label` is set; ignored without `label`" } },
+        { name: "className", type: "string", description: { tr: "`label` verildiğinde dış öğeye, yoksa anahtarın kendisine eklenir", en: "Added to the outer element when `label` is set, otherwise to the switch itself" } },
         { name: "aria-label", type: "string", description: { tr: "`label` yoksa erişilebilir ad", en: "Accessible name when there is no `label`" } },
       ],
     },
@@ -224,6 +263,9 @@ export default definePage({
     { name: "data-checked", kind: "data", description: { tr: "Açıkken bulunur", en: "Present while on" } },
     { name: "data-disabled", kind: "data", description: { tr: "Kapalıyken bulunur", en: "Present while disabled" } },
     { name: "data-labelled", kind: "data", description: { tr: "`onLabel` ve `offLabel` verildiğinde bulunur", en: "Present when `onLabel` and `offLabel` are set" } },
+    { name: "data-loading", kind: "data", description: { tr: "`loading` açıkken bulunur", en: "Present while `loading`" } },
+    { name: "--bt-switch-on", kind: "var", description: { tr: "Yazılı anahtarın açık zemini", en: "On background of a labelled switch" } },
+    { name: "--bt-switch-off", kind: "var", description: { tr: "Yazılı anahtarın kapalı zemini", en: "Off background of a labelled switch" } },
     { name: "--bt-accent-strong", kind: "var", description: { tr: "Yazısız anahtarın açık zemini", en: "On background of a plain switch" } },
     { name: "--bt-faint", kind: "var", description: { tr: "Yazısız anahtarın kapalı zemini", en: "Off background of a plain switch" } },
     { name: "--bt-radius", kind: "var", description: { tr: "Köşe yarıçapı", en: "Corner radius" } },

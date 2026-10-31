@@ -134,7 +134,7 @@ export function App({ onLang }: { onLang: (lang: Lang) => void }) {
     <LangContext.Provider value={lang}>
       <AppShell
         storageKey="btui-docs-nav"
-        sidebar={<Sidebar tone="light" logo={<a href={`#/${lang}/home`} className="d-mark" aria-label="btui">bt</a>} logoText="btui" groups={groups} />}
+        sidebar={<Sidebar tone="light" logo={<a href={`#/${lang}/home`} className="d-mark" aria-label="bt ui">bt</a>} logoText="btui" groups={groups} />}
         topbar={
           <Topbar>
             <TopbarSearch ref={search} placeholder={t({ tr: "Bileşen ara…", en: "Search components…" })} value={query} onChange={(e) => setQuery(e.target.value)} shortcut={<Kbd>⌘K</Kbd>} />

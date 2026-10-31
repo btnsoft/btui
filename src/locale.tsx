@@ -48,13 +48,14 @@ export type BtuiLocale = {
   endDate: string;
   invalidDate: string;
   pagination: string;
+  chart: { showTable: string; showChart: string; empty: string; other: string; type: string; trend: (first: string, last: string, high: string) => string; kinds: Record<"bar" | "stacked" | "line" | "area" | "donut", string> };
   grid: {
     filter: string; clearFilter: string; clearFilters: (count: number) => string; condition: string; value: string; valueTo: string; blank: string; selectAllValues: string;
     ops: Record<"contains" | "notContains" | "equals" | "startsWith" | "empty" | "notEmpty" | "=" | "!=" | ">" | ">=" | "<" | "<=" | "between", string>;
     sortAsc: string; sortDesc: string; sortHint: string; columnMenu: string; pin: string; pinLeft: string; pinRight: string; unpin: string; hide: string; autoSize: string; moveLeft: string; moveRight: string; resize: string;
     groupBy: string; ungroup: string; expandAll: string; collapseAll: string; total: string;
     export: string; exportExcel: string; exportCsv: string; exportSelected: (count: number) => string; copy: string; copyWithHeaders: string;
-    count: string; sum: string; average: string; min: string; max: string; invalidNumber: string; rowsPerPage: string; perPage: (count: number) => string;
+    count: string; sum: string; average: string; min: string; max: string; invalidNumber: string; rowsPerPage: string; perPage: (count: number) => string; selectAllRows: (count: number) => string; fillHint: string; makeChart: string; chartTitle: string; chartNeedsNumbers: string;
   };
   presets: { today: string; yesterday: string; last7: string; last30: string; thisMonth: string; lastMonth: string; thisYear: string };
 };
@@ -107,13 +108,14 @@ export const tr: BtuiLocale = {
   endDate: "Bitiş tarihi",
   invalidDate: "Geçersiz tarih",
   pagination: "Sayfalama",
+  chart: { showTable: "Tablo", showChart: "Grafik", empty: "Gösterilecek veri yok", other: "Diğer", type: "Grafik türü", trend: (first, last, high) => `Eğilim: ${first} değerinden ${last} değerine, en yüksek ${high}`, kinds: { bar: "Çubuk", stacked: "Yığılmış", line: "Çizgi", area: "Alan", donut: "Halka" } },
   grid: {
     filter: "Filtre", clearFilter: "Filtreyi kaldır", clearFilters: (count) => `Filtreleri temizle (${count})`, condition: "Koşul", value: "Değer", valueTo: "Üst değer", blank: "(Boş)", selectAllValues: "Tümünü seç",
     ops: { contains: "İçerir", notContains: "İçermez", equals: "Eşittir", startsWith: "İle başlar", empty: "Boş", notEmpty: "Boş değil", "=": "Eşittir", "!=": "Eşit değil", ">": "Büyüktür", ">=": "Büyük eşit", "<": "Küçüktür", "<=": "Küçük eşit", between: "Arasında" },
     sortAsc: "Artan", sortDesc: "Azalan", sortHint: "Shift ile basarak ikinci sıralama ekleyin", columnMenu: "kolon menüsü", pin: "Sabitle", pinLeft: "Sola", pinRight: "Sağa", unpin: "Kaldır", hide: "Gizle", autoSize: "Sığdır", moveLeft: "Sola taşı", moveRight: "Sağa taşı", resize: "genişliği ayarla",
     groupBy: "Grupla", ungroup: "Grubu kaldır", expandAll: "Tümünü aç", collapseAll: "Tümünü kapat", total: "Toplam",
     export: "Dışa aktar", exportExcel: "Excel (.xlsx)", exportCsv: "CSV", exportSelected: (count) => `Seçili ${count} satır (.xlsx)`, copy: "Kopyala", copyWithHeaders: "Başlıklarla kopyala",
-    count: "Adet", sum: "Toplam", average: "Ortalama", min: "En az", max: "En çok", invalidNumber: "Geçersiz sayı", rowsPerPage: "Sayfa başına satır", perPage: (count) => `${count} satır`,
+    count: "Adet", sum: "Toplam", average: "Ortalama", min: "En az", max: "En çok", invalidNumber: "Geçersiz sayı", rowsPerPage: "Sayfa başına satır", perPage: (count) => `${count} satır`, selectAllRows: (count) => `${count} kaydın tümünü seç`, fillHint: "Sürükleyerek doldurun", makeChart: "Grafik oluştur", chartTitle: "Seçimden grafik", chartNeedsNumbers: "Grafik için sayısal hücreler seçin",
   },
   presets: { today: "Bugün", yesterday: "Dün", last7: "Son 7 gün", last30: "Son 30 gün", thisMonth: "Bu ay", lastMonth: "Geçen ay", thisYear: "Bu yıl" },
 };
@@ -166,13 +168,14 @@ export const en: BtuiLocale = {
   endDate: "End date",
   invalidDate: "Invalid date",
   pagination: "Pagination",
+  chart: { showTable: "Table", showChart: "Chart", empty: "No data to show", other: "Other", type: "Chart type", trend: (first, last, high) => `Trend: from ${first} to ${last}, highest ${high}`, kinds: { bar: "Bar", stacked: "Stacked", line: "Line", area: "Area", donut: "Donut" } },
   grid: {
     filter: "Filter", clearFilter: "Remove filter", clearFilters: (count) => `Clear filters (${count})`, condition: "Condition", value: "Value", valueTo: "Upper value", blank: "(Blank)", selectAllValues: "Select all",
     ops: { contains: "Contains", notContains: "Does not contain", equals: "Equals", startsWith: "Starts with", empty: "Blank", notEmpty: "Not blank", "=": "Equals", "!=": "Not equal", ">": "Greater than", ">=": "At least", "<": "Less than", "<=": "At most", between: "Between" },
     sortAsc: "Ascending", sortDesc: "Descending", sortHint: "Hold Shift to add a sort level", columnMenu: "column menu", pin: "Pin", pinLeft: "Left", pinRight: "Right", unpin: "Unpin", hide: "Hide", autoSize: "Fit", moveLeft: "Move left", moveRight: "Move right", resize: "adjust width",
     groupBy: "Group", ungroup: "Remove group", expandAll: "Expand all", collapseAll: "Collapse all", total: "Total",
     export: "Export", exportExcel: "Excel (.xlsx)", exportCsv: "CSV", exportSelected: (count) => `${count} selected rows (.xlsx)`, copy: "Copy", copyWithHeaders: "Copy with headers",
-    count: "Count", sum: "Sum", average: "Average", min: "Min", max: "Max", invalidNumber: "Invalid number", rowsPerPage: "Rows per page", perPage: (count) => `${count} rows`,
+    count: "Count", sum: "Sum", average: "Average", min: "Min", max: "Max", invalidNumber: "Invalid number", rowsPerPage: "Rows per page", perPage: (count) => `${count} rows`, selectAllRows: (count) => `Select all ${count} records`, fillHint: "Drag to fill", makeChart: "Create chart", chartTitle: "Chart from selection", chartNeedsNumbers: "Select numeric cells to chart",
   },
   presets: { today: "Today", yesterday: "Yesterday", last7: "Last 7 days", last30: "Last 30 days", thisMonth: "This month", lastMonth: "Last month", thisYear: "This year" },
 };

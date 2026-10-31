@@ -20,7 +20,7 @@ export type FieldProps = {
   children: ReactNode;
 };
 
-type FieldInfo = { name?: string; labelled: boolean };
+type FieldInfo = { name?: string; labelled: boolean; labelId: string };
 const InFieldContext = createContext<FieldInfo | null>(null);
 
 /** What the surrounding Field knows, for controls that do their own form wiring. */
@@ -45,10 +45,10 @@ export function FieldItem({ children }: { children: ReactNode }) {
 export function Field({ label, hint, error, name, className, children }: FieldProps) {
   const labelId = useId();
   const group = asGroupControl(children);
-  const info = useMemo(() => ({ name, labelled: !!label }), [name, label]);
+  const info = useMemo(() => ({ name, labelled: !!label, labelId }), [name, label, labelId]);
   return (
     <BaseField.Root name={name} invalid={error ? true : undefined} className={cx("bt-field", className)} data-invalid={flag(error)}>
-      {!label ? null : group ? <span id={labelId} className="bt-label">{label}</span> : <BaseField.Label className="bt-label">{label}</BaseField.Label>}
+      {!label ? null : group ? <span id={labelId} className="bt-label">{label}</span> : <BaseField.Label id={labelId} className="bt-label">{label}</BaseField.Label>}
       <InFieldContext.Provider value={info}>
         {group && label ? cloneElement(group, { "aria-labelledby": labelId } as Record<string, string>) : children}
       </InFieldContext.Provider>
@@ -92,6 +92,10 @@ export type NumberInputProps = {
   format?: Intl.NumberFormatOptions;
   /** Hides the minus and plus buttons. */
   hideSteppers?: boolean;
+  /** Fixed content before the value, such as a currency sign. */
+  prefix?: ReactNode;
+  /** Fixed content after the value, such as a unit. */
+  suffix?: ReactNode;
   disabled?: boolean;
   required?: boolean;
   name?: string;
@@ -99,7 +103,7 @@ export type NumberInputProps = {
   "aria-label"?: string;
 };
 
-export function NumberInput({ value, defaultValue, onChange, min, max, step, format, hideSteppers, disabled, required, name, className, "aria-label": ariaLabel }: NumberInputProps) {
+export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(function NumberInput({ value, defaultValue, onChange, min, max, step, format, hideSteppers, prefix, suffix, disabled, required, name, className, "aria-label": ariaLabel }, ref) {
   const t = useLocale();
   return (
     <NumberField.Root
@@ -117,12 +121,14 @@ export function NumberInput({ value, defaultValue, onChange, min, max, step, for
     >
       <NumberField.Group className={cx("bt-input-wrap", className)}>
         {hideSteppers ? null : <NumberField.Decrement className="bt-number-btn" aria-label={t.decrease}>−</NumberField.Decrement>}
-        <NumberField.Input className="bt-input bt-number" aria-label={ariaLabel} />
+        {prefix ? <span className="bt-adorn">{prefix}</span> : null}
+        <NumberField.Input ref={ref} className="bt-input bt-number" aria-label={ariaLabel} />
+        {suffix ? <span className="bt-adorn">{suffix}</span> : null}
         {hideSteppers ? null : <NumberField.Increment className="bt-number-btn" aria-label={t.increase}>+</NumberField.Increment>}
       </NumberField.Group>
     </NumberField.Root>
   );
-}
+});
 
 export type RadioOption = { value: string; label: ReactNode; hint?: ReactNode; disabled?: boolean };
 
@@ -140,9 +146,10 @@ export type RadioGroupProps = {
   "aria-labelledby"?: string;
 };
 
-export function RadioGroup({ options, value, defaultValue, onChange, orientation = "vertical", disabled, required, name, className, "aria-label": ariaLabel, "aria-labelledby": labelledBy }: RadioGroupProps) {
+const RadioGroupBase = forwardRef<HTMLDivElement, RadioGroupProps>(function RadioGroup({ options, value, defaultValue, onChange, orientation = "vertical", disabled, required, name, className, "aria-label": ariaLabel, "aria-labelledby": labelledBy }, ref) {
   return (
     <BaseRadioGroup
+      ref={ref}
       value={value}
       defaultValue={defaultValue}
       onValueChange={(next) => onChange?.(next as string)}
@@ -166,7 +173,9 @@ export function RadioGroup({ options, value, defaultValue, onChange, orientation
       ))}
     </BaseRadioGroup>
   );
-}
+});
+
+export const RadioGroup = Object.assign(RadioGroupBase, { btGroup: "always" as const });
 
 export type TextareaProps = ComponentPropsWithoutRef<"textarea">;
 
@@ -201,20 +210,25 @@ export type SwitchProps = {
   /** Text inside the switch: the classic red/green labelled toggle. Use both or neither. */
   onLabel?: string;
   offLabel?: string;
+  /** Waiting for a save: the switch stays put and takes no input. */
+  loading?: boolean;
   "aria-label"?: string;
 };
 
-export function Switch({ checked, defaultChecked, onChange, disabled, name, label, hint, className, onLabel, offLabel, "aria-label": ariaLabel }: SwitchProps) {
+const SwitchBase = forwardRef<HTMLElement, SwitchProps>(function Switch({ checked, defaultChecked, onChange, disabled, name, label, hint, className, onLabel, offLabel, loading, "aria-label": ariaLabel }, ref) {
   const id = useId();
   const labelled = onLabel !== undefined && offLabel !== undefined;
   const control = (
     <BaseSwitch.Root
+      ref={ref}
       id={id}
+      aria-busy={loading || undefined}
+      data-loading={flag(loading)}
       name={name}
       checked={checked}
       defaultChecked={defaultChecked}
       onCheckedChange={(next) => onChange?.(next)}
-      disabled={disabled}
+      disabled={disabled || loading}
       aria-label={ariaLabel}
       className={cx("bt-switch", !label && className)}
       data-labelled={flag(labelled)}
@@ -235,7 +249,9 @@ export function Switch({ checked, defaultChecked, onChange, disabled, name, labe
       </span>
     </FieldItem>
   );
-}
+});
+
+export const Switch = Object.assign(SwitchBase, { btGroup: "labelled" as const });
 
 export type CheckboxProps = {
   checked?: boolean;
@@ -252,9 +268,10 @@ export type CheckboxProps = {
   "aria-label"?: string;
 };
 
-export function Checkbox({ checked, defaultChecked, indeterminate, onChange, disabled, required, name, label, hint, className, "aria-label": ariaLabel }: CheckboxProps) {
+const CheckboxBase = forwardRef<HTMLElement, CheckboxProps>(function Checkbox({ checked, defaultChecked, indeterminate, onChange, disabled, required, name, label, hint, className, "aria-label": ariaLabel }, ref) {
   const control = (
     <BaseCheckbox.Root
+      ref={ref}
       name={name}
       checked={checked}
       defaultChecked={defaultChecked}
@@ -288,8 +305,6 @@ export function Checkbox({ checked, defaultChecked, indeterminate, onChange, dis
       </label>
     </FieldItem>
   );
-}
+});
 
-RadioGroup.btGroup = "always" as const;
-Checkbox.btGroup = "labelled" as const;
-Switch.btGroup = "labelled" as const;
+export const Checkbox = Object.assign(CheckboxBase, { btGroup: "labelled" as const });

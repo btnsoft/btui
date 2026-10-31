@@ -1,9 +1,10 @@
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Combobox } from "@base-ui/react/combobox";
 import { Select as BaseSelect } from "@base-ui/react/select";
 import { Check, ChevronDown, Close, Search } from "../icons";
 import { useLocale } from "../locale";
 import { cx, flag, includesText } from "../utils";
+import { useFieldInfo } from "./form";
 
 export type SelectOption = {
   value: string;
@@ -28,8 +29,10 @@ type SharedProps = {
 };
 
 export type SelectProps = SharedProps & {
-  value: string;
-  onChange: (value: string) => void;
+  /** Selected value. Leave it out and use `defaultValue` to let the component keep it. */
+  value?: string;
+  defaultValue?: string;
+  onChange?: (value: string) => void;
   /** Search box in the list. By default it appears above 8 options. */
   searchable?: boolean;
   /** Clear button. Clearing reports an empty string. */
@@ -75,10 +78,14 @@ function SearchRow({ placeholder }: { placeholder: string }) {
 }
 
 export function Select({
-  value, onChange, options, placeholder, label, variant = "field", size = "md", searchable, clearable, disabled, required, block, name, className, "aria-label": ariaLabel,
+  value: controlled, defaultValue = "", onChange: report, options, placeholder, label, variant = "field", size = "md", searchable, clearable, disabled, required, block, name, className, "aria-label": ariaLabel,
 }: SelectProps) {
   const t = useLocale();
   const filter = useFilter();
+  const field = useFieldInfo();
+  const [own, setOwn] = useState(defaultValue);
+  const value = controlled ?? own;
+  const onChange = (next: string) => { setOwn(next); report?.(next); };
   const selected = options.find((o) => o.value === value) ?? null;
   const search = searchable ?? options.length > SEARCH_THRESHOLD;
   const canClear = !!clearable && !!selected && !disabled;
@@ -87,7 +94,9 @@ export function Select({
     "data-variant": variant,
     "data-size": size,
     "data-filled": flag(variant === "filter" && selected),
-    "aria-label": ariaLabel ?? (variant === "filter" ? undefined : label),
+    // A combobox takes no name from its content, so the filter box spells it out.
+    "aria-label": ariaLabel ?? (variant === "filter" ? `${label ? `${label}: ` : ""}${selected?.label ?? placeholder ?? t.select}` : label),
+    "aria-labelledby": !ariaLabel && variant !== "filter" && field?.labelled ? field.labelId : undefined,
   };
   const content = <TriggerContent label={label} variant={variant} text={selected?.label ?? placeholder ?? t.select} empty={!selected} />;
 
@@ -159,11 +168,13 @@ export function Select({
 export type MultiSelectProps = SharedProps & {
   value: string[];
   onChange: (value: string[]) => void;
+  /** "Select all" and "Clear" above the list. On from 6 options. */
+  bulk?: boolean;
   name?: string;
 };
 
 export function MultiSelect({
-  value, onChange, options, placeholder, label, variant = "filter", size = "md", disabled, block, name, className, "aria-label": ariaLabel,
+  value, onChange, options, placeholder, label, variant = "filter", size = "md", bulk, disabled, block, name, className, "aria-label": ariaLabel,
 }: MultiSelectProps) {
   const t = useLocale();
   const filter = useFilter();
@@ -188,7 +199,7 @@ export function MultiSelect({
           data-variant={variant}
           data-size={size}
           data-filled={flag(variant === "filter" && selected.length)}
-          aria-label={ariaLabel ?? (variant === "filter" ? undefined : label)}
+          aria-label={ariaLabel ?? (variant === "filter" ? `${label ? `${label}: ` : ""}${text}` : label)}
         >
           <TriggerContent label={label} variant={variant} text={text} empty={selected.length === 0} />
         </Combobox.Trigger>
@@ -196,6 +207,12 @@ export function MultiSelect({
           <Combobox.Positioner className="bt-positioner" sideOffset={4} align="start">
             <Combobox.Popup className="bt-popup bt-list-pop">
               <SearchRow placeholder={t.search} />
+              {bulk ?? options.length >= 6 ? (
+                <div className="bt-list-bulk">
+                  <button type="button" onClick={() => onChange(options.filter((o) => !o.disabled || value.includes(o.value)).map((o) => o.value))}>{t.grid.selectAllValues}</button>
+                  <button type="button" disabled={value.length === 0} onClick={() => onChange([])}>{t.clear}</button>
+                </div>
+              ) : null}
               <Combobox.Empty className="bt-list-empty">{t.noResults}</Combobox.Empty>
               <Combobox.List className="bt-list">
                 {(o: SelectOption) => (

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { Button, Field, Input, RadioGroup } from "btui";
 import { useText } from "../lib/i18n";
 import { definePage } from "../lib/schema";
@@ -167,6 +167,26 @@ function Required() {
   );
 }
 
+function Focus() {
+  const t = useText();
+  const group = useRef<HTMLDivElement>(null);
+  return (
+    <div className="d-stack">
+      <Field label={t({ tr: "Teslimat yöntemi", en: "Delivery method" })}>
+        <RadioGroup
+          ref={group}
+          orientation="horizontal"
+          options={[
+            { value: "cargo", label: t({ tr: "Kargo", en: "Courier" }) },
+            { value: "pickup", label: t({ tr: "Depodan teslim", en: "Warehouse pickup" }) },
+          ]}
+        />
+      </Field>
+      <div><Button size="sm" onClick={() => group.current?.querySelector<HTMLElement>("[role=radio]")?.focus()}>{t({ tr: "Eksik alana git", en: "Go to the missing field" })}</Button></div>
+    </div>
+  );
+}
+
 export default definePage({
   summary: { tr: "Birbirini dışlayan seçeneklerden tam olarak birini seçtirir. Tüm seçenekler görünür kaldığı için karşılaştırmayı kolaylaştırır.", en: "Picks exactly one of several mutually exclusive options. All options stay in view, which makes them easy to compare." },
   imports: 'import { RadioGroup } from "btui";',
@@ -287,6 +307,18 @@ export default definePage({
       },
     },
     {
+      id: "ref",
+      title: { tr: "Ref ile odak", en: "Focus through a ref" },
+      body: { tr: "`ref` grubun `div` öğesine iletilir. Grubun kendisi odak almaz; eksik seçimde ilk seçeneğe gitmek için içindeki `radio` öğesini bulun.", en: "`ref` reaches the group's `div`. The group itself takes no focus, so to reach the first option on a missing choice, look up the `radio` inside it." },
+      example: {
+        Demo: Focus,
+        code: `const group = useRef<HTMLDivElement>(null);
+
+<RadioGroup ref={group} orientation="horizontal" options={METHODS} />
+<Button size="sm" onClick={() => group.current?.querySelector("[role=radio]")?.focus()}>Go to the missing field</Button>`,
+      },
+    },
+    {
       id: "standalone",
       title: { tr: "Field olmadan", en: "Without Field" },
       body: { tr: "`Field` kullanmıyorsanız grubu `aria-label` ile adlandırın. Başlık ekranda görünüyorsa `aria-labelledby` ile o öğeye bağlayın, metin iki kez yazılmamış olur.", en: "Without `Field`, name the group with `aria-label`. If a caption is on screen, link to it with `aria-labelledby`, so the text is not written twice." },
@@ -311,7 +343,7 @@ export default definePage({
   api: [
     {
       name: "RadioGroup",
-      description: { tr: "Yerel öznitelikler ve ref iletilmez; yalnız aşağıdaki proplar geçerlidir.", en: "Native attributes and the ref are not forwarded; only the props below apply." },
+      description: { tr: "Ref grup öğesine iletilir. Yerel öznitelikler iletilmez; yalnız aşağıdaki özellikler geçerlidir.", en: "The ref reaches the group element. Native attributes are not forwarded; only the props below apply." },
       props: [
         { name: "options", type: "RadioOption[]", required: true, description: { tr: "Seçenekler", en: "The options" } },
         { name: "value", type: "string", description: { tr: "Denetimli değer", en: "Controlled value" } },

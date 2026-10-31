@@ -64,20 +64,19 @@ function Deep() {
   );
 }
 
-function RouterLink({ to, onGo, children }: { to: string; onGo: (to: string) => void; children: ReactNode }) {
-  return <a href={to} onClick={(e) => { e.preventDefault(); onGo(to); }}>{children}</a>;
-}
-
 function WithRouter() {
   const t = useText();
   const [path, setPath] = useState("/invoices/418");
   return (
     <div className="d-stack-wide">
-      <Breadcrumb items={[
-        { label: <RouterLink to="/" onGo={setPath}>{t({ tr: "Ana sayfa", en: "Home" })}</RouterLink> },
-        { label: <RouterLink to="/invoices" onGo={setPath}>{t({ tr: "Faturalar", en: "Invoices" })}</RouterLink> },
-        { label: "FT-2026-0418" },
-      ]} />
+      <Breadcrumb
+        items={[
+          { label: t({ tr: "Ana sayfa", en: "Home" }), href: "/" },
+          { label: t({ tr: "Faturalar", en: "Invoices" }), href: "/invoices" },
+          { label: "FT-2026-0418" },
+        ]}
+        renderLink={(props, item) => <a {...props} onClick={(e) => { e.preventDefault(); setPath(item.href ?? "/"); }} />}
+      />
       <small>{t({ tr: "Yönlendirici adresi", en: "Router path" })}: <code>{path}</code></small>
     </div>
   );
@@ -113,6 +112,7 @@ export default definePage({
     { label: "Parent", href: "/parent" },
     { label: "Current page" },
   ]}
+  renderLink={(props, item) => <Link {...props} />}
 />`,
   examples: [
     {
@@ -154,15 +154,16 @@ export default definePage({
     {
       id: "router",
       title: { tr: "Yönlendirici ile", en: "With a router" },
-      body: { tr: "`href` düz bir `<a>` çizer ve sayfa yenilenir. İstemci tarafı geçiş için `href` vermeyin, `label` içine yönlendiricinizin bağlantısını koyun. Bağlantı biçimi aynı kalır. Canlı örnekteki bağlantılar yönlendiriciyi taklit eder.", en: "`href` draws a plain `<a>` and reloads the page. For client-side moves, leave out `href` and put your router's link in `label`. The link keeps its look. The links in the live example stand in for a router." },
+      body: { tr: "`href` düz bir `<a>` çizer ve sayfa yenilenir. İstemci tarafı geçiş için `href` değerlerini olduğu gibi bırakın, `renderLink` ile yönlendiricinizin bağlantısını takın. `renderLink` hazır bağlantı özelliklerini (`href`, `children`) ve öğenin kendisini alır; yalnız bağlantı olacak öğelerde çağrılır, son öğeye dokunmaz. Bağlantı biçimi aynı kalır. Canlı örnekteki bağlantılar yönlendiriciyi taklit eder.", en: "`href` draws a plain `<a>` and reloads the page. For client-side moves, keep your `href` values and plug in your router's link with `renderLink`. `renderLink` receives the ready-made link props (`href`, `children`) and the item itself; it runs only for items that will be links and leaves the last one alone. The link keeps its look. The links in the live example stand in for a router." },
       example: { Demo: WithRouter, block: true, code: `import { Link } from "react-router";
 
 <Breadcrumb
   items={[
-    { label: <Link to="/">Home</Link> },
-    { label: <Link to="/invoices">Invoices</Link> },
+    { label: "Home", href: "/" },
+    { label: "Invoices", href: "/invoices" },
     { label: "FT-2026-0418" },
   ]}
+  renderLink={({ href, children }) => <Link to={href ?? "/"}>{children}</Link>}
 />` },
     },
   ],
@@ -182,6 +183,7 @@ export default definePage({
       name: "Breadcrumb",
       props: [
         { name: "items", type: "Crumb[]", required: true, description: { tr: "Baştan sona yol öğeleri; sonuncusu açık sayfadır", en: "Path items from first to last; the last one is the current page" } },
+        { name: "renderLink", type: '(props: ComponentPropsWithoutRef<"a">, item: Crumb) => ReactElement', description: { tr: "Yönlendiricinizin bağlantısını takar; `href` taşıyan ve son olmayan öğelerde çağrılır", en: "Plugs in your router's link; called for items with `href` that are not the last" } },
       ],
     },
     {

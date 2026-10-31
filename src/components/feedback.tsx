@@ -50,8 +50,9 @@ export type ProgressProps = {
 };
 
 export function Progress({ value, label, showValue = true, tone = "accent", "aria-label": ariaLabel, className }: ProgressProps) {
+  const t = useLocale();
   return (
-    <BaseProgress.Root value={value} aria-label={ariaLabel} className={cx("bt-progress", className)} data-tone={tone}>
+    <BaseProgress.Root value={value} locale={t.lang} aria-label={ariaLabel} getAriaValueText={(formatted, current) => (current === null ? t.loading : formatted)} className={cx("bt-progress", className)} data-tone={tone}>
       {label ? <BaseProgress.Label className="bt-progress-label">{label}</BaseProgress.Label> : <span />}
       {showValue ? <BaseProgress.Value className="bt-progress-value" /> : <span />}
       <BaseProgress.Track className="bt-progress-track">

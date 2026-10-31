@@ -61,7 +61,7 @@ function Filter() {
   return (
     <div style={{ display: "grid", gap: 12 }}>
       <KpiGrid>
-        {statuses.map((s) => <Kpi key={s} label={t(STATUS_LABEL[s])} value={ORDERS.filter((o) => o.status === s).length} onClick={() => setStatus(s)} />)}
+        {statuses.map((s) => <Kpi key={s} label={t(STATUS_LABEL[s])} value={ORDERS.filter((o) => o.status === s).length} active={status === s} onClick={() => setStatus(s)} />)}
       </KpiGrid>
       <p role="status" style={{ margin: 0, color: "var(--bt-text-2)" }}>
         {t({ tr: `${t(STATUS_LABEL[status])} durumunda ${rows.length} sipariş listeleniyor. İlk kayıt: ${rows[0]?.no}`, en: `Listing ${rows.length} orders with status ${t(STATUS_LABEL[status])}. First record: ${rows[0]?.no}` })}
@@ -111,6 +111,8 @@ export default definePage({
     value="Value"
     trend={{ value: "8%", direction: "up", good: true }}
     note="Note"
+    active={false}
+    onClick={open}
   />
 </KpiGrid>`,
   examples: [
@@ -154,14 +156,14 @@ export default definePage({
     {
       id: "clickable",
       title: { tr: "Tıklanabilir gösterge", en: "Clickable KPI" },
-      body: { tr: "`onClick` verilince gösterge gerçek bir `<button>` olur. Sayıya basıp ilgili listeye geçmek pano ekranlarının en sık kullanılan yoludur. Etkin göstergeyi işaretleyen bir prop yoktur, bu yüzden seçili durumu yakındaki metinde belirtin.", en: "With `onClick` the KPI becomes a real `<button>`. Pressing a number to reach the matching list is the most common path on a dashboard. There is no prop to mark the active KPI, so state the selection in nearby text." },
+      body: { tr: "`onClick` verilince gösterge gerçek bir `<button>` olur. Sayıya basıp ilgili listeye geçmek pano ekranlarının en sık kullanılan yoludur. Filtre gibi çalışan kartta `active` seçili olanı işaretler: kart vurgulu kenarlık alır ve `aria-pressed` taşır. `active` yalnız `onClick` ile birlikte etkilidir.", en: "With `onClick` the KPI becomes a real `<button>`. Pressing a number to reach the matching list is the most common path on a dashboard. On a card that works as a filter, `active` marks the one in use: it gets an accent border and carries `aria-pressed`. `active` only works together with `onClick`." },
       example: {
         Demo: Filter,
         block: true,
         code: `<KpiGrid>
-  <Kpi label="Open" value={15} onClick={() => setStatus("open")} />
-  <Kpi label="Pending" value={8} onClick={() => setStatus("pending")} />
-  <Kpi label="Done" value={11} onClick={() => setStatus("done")} />
+  <Kpi label="Open" value={15} active={status === "open"} onClick={() => setStatus("open")} />
+  <Kpi label="Pending" value={8} active={status === "pending"} onClick={() => setStatus("pending")} />
+  <Kpi label="Done" value={11} active={status === "done"} onClick={() => setStatus("done")} />
 </KpiGrid>`,
       },
     },
@@ -181,6 +183,7 @@ export default definePage({
   ],
   a11y: [
     { tr: "`onClick` varsa `<button>`, yoksa `<div>` çizer; salt okunur gösterge klavye sırasına girmez.", en: "Renders a `<button>` with `onClick` and a `<div>` without, so a read-only KPI stays out of the tab order." },
+    { tr: "`active` verilen kart `aria-pressed` taşır; ekran okuyucu seçili filtreyi basılı düğme olarak duyurur.", en: "A card with `active` carries `aria-pressed`, so a screen reader announces the filter in use as a pressed button." },
     { tr: "Eğilim yönü hem ok hem renkle gösterilir, renk ayrımı yapamayan kullanıcılar da okuyabilir.", en: "Trend direction shows through both an arrow and colour, so it holds for colour blind users." },
     { tr: "`tone` yalnız renktir. Durum önemliyse `label` ya da `note` içinde de söyleyin.", en: "`tone` is colour alone. If the state matters, say it in `label` or `note` too." },
   ],
@@ -192,7 +195,7 @@ export default definePage({
   api: [
     {
       name: "Kpi",
-      description: { tr: "Yerel öznitelikler iletilmez; yalnız aşağıdaki prop'lar geçerlidir.", en: "Native attributes are not forwarded; only the props below apply." },
+      description: { tr: "Yerel öznitelikler iletilmez; yalnız aşağıdaki özellikler geçerlidir.", en: "Native attributes are not forwarded; only the props below apply." },
       props: [
         { name: "label", type: "ReactNode", required: true, description: { tr: "Ölçümün adı", en: "Name of the measure" } },
         { name: "value", type: "ReactNode", required: true, description: { tr: "Ana değer", en: "Main value" } },
@@ -201,6 +204,7 @@ export default definePage({
         { name: "icon", type: "ReactNode", description: { tr: "Etiketten önce gösterilir", en: "Shown before the label" } },
         { name: "tone", type: '"neutral" | "ok" | "warn" | "danger"', default: '"neutral"', description: { tr: "Yalnız sayıyı boyar", en: "Colours the number only" } },
         { name: "onClick", type: "() => void", description: { tr: "Göstergeyi `<button>` yapar", en: "Turns the KPI into a `<button>`" } },
+        { name: "active", type: "boolean", description: { tr: "Tıklanabilir kartı kullanılan filtre olarak işaretler", en: "Marks a clickable card as the filter in use" } },
         { name: "className", type: "string", description: { tr: "Dış öğeye eklenir", en: "Added to the outer element" } },
       ],
     },
@@ -215,11 +219,12 @@ export default definePage({
   ],
   styling: [
     { name: "data-tone", kind: "data", description: { tr: "`.bt-kpi` üzerinde seçili ton", en: "The current tone on `.bt-kpi`" } },
+    { name: "data-active", kind: "data", description: { tr: "`active` açık düğme kartta bulunur", en: "On a button card with `active` on" } },
     { name: "data-good", kind: "data", description: { tr: "`.bt-kpi-trend` üzerinde `true` ya da `false`", en: "`true` or `false` on `.bt-kpi-trend`" } },
     { name: "--bt-ok", kind: "var", description: { tr: "`ok` sayısı ve iyi yöndeki eğilim", en: "`ok` number and a trend in the good direction" } },
     { name: "--bt-warn", kind: "var", description: { tr: "`warn` sayısı", en: "`warn` number" } },
     { name: "--bt-danger", kind: "var", description: { tr: "`danger` sayısı ve kötü yöndeki eğilim", en: "`danger` number and a trend in the bad direction" } },
     { name: "--bt-muted", kind: "var", description: { tr: "Etiket ve not rengi", en: "Label and note colour" } },
   ],
-  related: ["card", "data-table", "badge", "progress"],
+  related: ["card", "data-table", "badge", "progress", "sparkline"],
 });

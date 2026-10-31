@@ -2,11 +2,12 @@ export { Button, ButtonGroup, IconButton, type ButtonProps, type ButtonSize, typ
 export { Avatar, Badge, Chip, ChipGroup, EmptyState, Kbd, Loading, Spinner, Status, type AvatarProps, type BadgeProps, type ChipProps, type EmptyStateProps, type StatusProps } from "./components/display";
 export { Checkbox, Field, Input, NumberInput, RadioGroup, SearchInput, Switch, Textarea, type CheckboxProps, type FieldProps, type InputProps, type NumberInputProps, type RadioGroupProps, type RadioOption, type SearchInputProps, type SwitchProps, type TextareaProps } from "./components/form";
 export { MultiSelect, Select, type MultiSelectProps, type SelectOption, type SelectProps } from "./components/select";
-export { Card, InfoRow, Kpi, KpiGrid, type CardProps, type KpiProps } from "./components/card";
+export { Card, InfoList, InfoRow, Kpi, KpiGrid, type CardProps, type KpiProps } from "./components/card";
 export { Tabs, type TabItem, type TabsProps } from "./components/tabs";
-export { BtuiProvider, Drawer, Menu, MenuItem, MenuSeparator, Modal, Tooltip, useConfirm, useToast, type BtuiProviderProps, type ConfirmOptions, type DrawerProps, type MenuItemProps, type MenuProps, type ModalProps, type ToastOptions, type TooltipProps } from "./components/overlay";
-export { AppShell, Breadcrumb, FilterBar, Page, PageHeader, Sidebar, Topbar, TopbarSearch, TopbarSeparator, TopbarSpacer, type AppShellProps, type Crumb, type FilterBarProps, type NavGroup, type NavItem, type PageHeaderProps, type SidebarProps, type TopbarSearchProps } from "./components/shell";
+export { BtuiProvider, Drawer, Menu, MenuGroup, MenuItem, MenuSeparator, Modal, SubMenu, Tooltip, useConfirm, useToast, type BtuiProviderProps, type ConfirmOptions, type DrawerProps, type MenuItemProps, type MenuProps, type ModalProps, type ToastOptions, type TooltipProps } from "./components/overlay";
+export { AppShell, Breadcrumb, FilterBar, Page, PageHeader, Sidebar, Topbar, TopbarSearch, TopbarSeparator, TopbarSpacer, type AppShellProps, type BreadcrumbProps, type Crumb, type FilterBarProps, type NavGroup, type NavItem, type PageHeaderProps, type SidebarProps, type TopbarSearchProps } from "./components/shell";
 export * from "./components/table";
+export { AreaChart, BarChart, DataBar, DonutChart, LineChart, Sparkline, niceTicks, type BarChartProps, type ChartSeries, type DonutChartProps, type LineChartProps, type SparklineProps } from "./components/chart";
 export { Accordion, Alert, Popover, Progress, Skeleton, type AccordionItem, type AccordionProps, type AlertProps, type PopoverProps, type ProgressProps, type SkeletonProps } from "./components/feedback";
 export { Calendar, DatePicker, DateRangePicker, datePresets, type CalendarProps, type DatePickerProps, type DateRange, type DateRangePickerProps, type DateRangePreset, type IsoDate } from "./components/date";
 export { formatDate, parseDate, todayIso } from "./date";

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { IconBuildingStore, IconChartBar, IconDownload, IconFileInvoice, IconPencil, IconUsers } from "@tabler/icons-react";
-import { Badge, Button, Card, IconButton, InfoRow } from "btui";
-import { money, ORDERS } from "../lib/data";
+import { Badge, Button, Card, DataTable, IconButton, InfoRow, type Column } from "btui";
+import { money, ORDERS, type Order } from "../lib/data";
 import { useLang, useText } from "../lib/i18n";
 import { definePage } from "../lib/schema";
 
@@ -93,6 +93,21 @@ function Flush() {
   );
 }
 
+function FlushTable() {
+  const t = useText();
+  const lang = useLang();
+  const columns: Column<Order>[] = [
+    { key: "no", header: t({ tr: "Sipariş", en: "Order" }), sortable: false },
+    { key: "customer", header: t({ tr: "Müşteri", en: "Customer" }), sortable: false },
+    { key: "amount", header: t({ tr: "Tutar", en: "Amount" }), align: "right", sortable: false, cell: (o) => money(o.amount, lang) },
+  ];
+  return (
+    <Card title={t({ tr: "Son siparişler", en: "Latest orders" })} icon={<IconFileInvoice size={16} />} flush>
+      <DataTable controls={false} columns={columns} rows={ORDERS.slice(0, 4)} getRowKey={(o) => o.id} />
+    </Card>
+  );
+}
+
 function Grid() {
   const t = useText();
   const lang = useLang();
@@ -132,7 +147,7 @@ export default definePage({
       { tr: "Form bölümlerini görsel olarak ayırmak", en: "Setting form sections apart" },
     ],
     dont: [
-      { tr: "`DataTable` sarmak; tablonun kendi çerçevesi ve bandı vardır, çift kenar oluşur", en: "Wrapping a `DataTable`; it has its own frame and band, so the borders double up" },
+      { tr: "`flush` olmadan `DataTable` sarmak; tablonun kendi çerçevesi vardır, iç boşlukla birlikte çift kenar oluşur", en: "Wrapping a `DataTable` without `flush`; it has its own frame, so with the padding the borders double up" },
       { tr: "Kart içinde kart; hiyerarşi okunmaz olur", en: "Nesting cards; the hierarchy stops reading" },
       { tr: "Tek sayı göstermek; bunun için `Kpi` kullanın", en: "Showing a single number; use `Kpi` for that" },
     ],
@@ -144,7 +159,7 @@ export default definePage({
     {
       id: "plain",
       title: { tr: "Başlıksız", en: "Without a header" },
-      body: { tr: "`title` ve `actions` yoksa üst bölüm hiç çizilmez, yalnız içerik görünür. `subtitle` ve `icon` tek başına üst bölümü açmaz.", en: "Without `title` and `actions` the header is not drawn and only the content shows. `subtitle` and `icon` alone do not open the header." },
+      body: { tr: "`title`, `subtitle` ve `actions` yoksa üst bölüm hiç çizilmez, yalnız içerik görünür. `icon` tek başına üst bölümü açmaz.", en: "Without `title`, `subtitle` and `actions` the header is not drawn and only the content shows. `icon` alone does not open the header." },
       example: { Demo: Plain, block: true, code: `<Card>The quote goes to the customer once the sales manager has approved it.</Card>` },
     },
     {
@@ -183,12 +198,24 @@ export default definePage({
     {
       id: "flush",
       title: { tr: "Kenarsız içerik", en: "Flush content" },
-      body: { tr: "`flush` gövdenin iç boşluğunu kaldırır. Kartın kenarına kadar uzanması gereken grafik ve görseller için kullanın.", en: "`flush` removes the body padding. Use it for charts and images that should reach the edge of the card." },
+      body: { tr: "`flush` gövdenin iç boşluğunu kaldırır. Kartın kenarına kadar uzanması gereken grafik, liste ve görseller için kullanın.", en: "`flush` removes the body padding. Use it for charts, lists and images that should reach the edge of the card." },
       example: {
         Demo: Flush,
         block: true,
         code: `<Card title="Weekly revenue" subtitle="Last eight weeks" flush>
   <RevenueChart />
+</Card>`,
+      },
+    },
+    {
+      id: "flush-table",
+      title: { tr: "Kart içinde tablo", en: "A table in a card" },
+      body: { tr: "`flush` verilen kartın doğrudan çocuğu olan `DataTable` kendi çerçevesini, köşesini ve gölgesini bırakır; çift kenar oluşmaz. Tablonun kart gövdesinin doğrudan çocuğu olması gerekir, araya bir `div` girerse çerçeve geri gelir.", en: "A `DataTable` that is a direct child of a `flush` card drops its own frame, corners and shadow, so no double border appears. The table must be a direct child of the card body; a `div` in between brings the frame back." },
+      example: {
+        Demo: FlushTable,
+        block: true,
+        code: `<Card title="Latest orders" icon={<IconFileInvoice size={16} />} flush>
+  <DataTable controls={false} columns={columns} rows={orders} getRowKey={(o) => o.id} />
 </Card>`,
       },
     },
@@ -221,7 +248,7 @@ export default definePage({
         { name: "subtitle", type: "ReactNode", description: { tr: "Başlığın altında kısa açıklama", en: "Short text under the title" } },
         { name: "icon", type: "ReactNode", description: { tr: "Başlıktan önce gösterilir; `title` yoksa görünmez", en: "Shown before the title; hidden without `title`" } },
         { name: "actions", type: "ReactNode", description: { tr: "Üst bölümün sağındaki eylemler", en: "Actions on the right of the header" } },
-        { name: "flush", type: "boolean", default: "false", description: { tr: "Gövdenin iç boşluğunu kaldırır", en: "Removes the body padding" } },
+        { name: "flush", type: "boolean", default: "false", description: { tr: "Gövdenin iç boşluğunu kaldırır; doğrudan çocuk olan `DataTable` çerçevesini bırakır", en: "Removes the body padding; a direct `DataTable` child drops its frame" } },
         { name: "className", type: "string", description: { tr: "Dış öğeye eklenir", en: "Added to the outer element" } },
         { name: "children", type: "ReactNode", description: { tr: "Kart gövdesi", en: "Card body" } },
       ],

@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
-import { IconBuildingWarehouse, IconChecklist, IconFileInvoice, IconLayoutDashboard, IconPackage, IconSettings, IconUsers } from "@tabler/icons-react";
-import { AppShell, Button, EmptyState, Page, PageHeader, Sidebar, Topbar, type NavGroup, type NavItem, type SidebarProps } from "btui";
+import { IconBuildingWarehouse, IconChecklist, IconFileInvoice, IconLayoutDashboard, IconLogout, IconPackage, IconRefresh, IconSettings, IconUsers } from "@tabler/icons-react";
+import { AppShell, Button, EmptyState, Page, PageHeader, Sidebar, Topbar, useToast, type NavGroup, type NavItem, type SidebarProps } from "btui";
 import { useText } from "../lib/i18n";
 import { definePage } from "../lib/schema";
 
@@ -161,6 +161,29 @@ function Links() {
   );
 }
 
+function ButtonItems() {
+  const t = useText();
+  const toast = useToast();
+  const nav = useNav();
+  const groups: NavGroup[] = [
+    ...nav.groups.slice(0, 2),
+    {
+      label: t({ tr: "Oturum", en: "Session" }),
+      items: [
+        { label: t({ tr: "Verileri yenile", en: "Refresh data" }), icon: <IconRefresh size={16} />, onClick: () => toast({ title: t({ tr: "Veriler yenilendi", en: "Data refreshed" }), tone: "ok" }) },
+        { label: t({ tr: "Oturumu kapat", en: "Sign out" }), icon: <IconLogout size={16} />, onClick: () => toast({ title: t({ tr: "Oturum kapatıldı", en: "Signed out" }) }) },
+      ],
+    },
+  ];
+  return (
+    <Frame>
+      <AppShell className="d-mini" sidebar={<Sidebar aria-label={t({ tr: "Ana menü", en: "Main menu" })} className="erp-nav" logo={<IconBuildingWarehouse size={22} />} logoText="Atlas ERP" groups={groups} />} topbar={<Topbar />}>
+        <Page><PageHeader title={nav.title} /></Page>
+      </AppShell>
+    </Frame>
+  );
+}
+
 export default definePage({
   summary: { tr: "Uygulamanın ana gezinme menüsüdür. Modülleri gruplar, açık sayfayı işaretler ve bekleyen işlerin sayısını gösterir.", en: "The main navigation of an application. It groups modules, marks the current page and shows how much work is waiting." },
   imports: 'import { Sidebar, type NavGroup, type NavItem } from "btui";',
@@ -208,6 +231,7 @@ export default definePage({
   logo={<Logo />}
   logoText="Atlas ERP"
   tone="dark"
+  aria-label="Main menu"
   groups={[{ label: "Sales", items: [{ label: "Orders", href: "/orders", icon: <Icon />, active: true, count: 12 }] }]}
   renderLink={(props, item) => <Link {...props} href={item.href ?? "#"} />}
 />`,
@@ -242,6 +266,23 @@ const groups: NavGroup[] = [
 <Button variant="success" disabled={waiting === 0} onClick={() => setWaiting(waiting - 1)}>
   Approve the next one
 </Button>` },
+    },
+    {
+      id: "button-items",
+      title: { tr: "Bağlantısız öğeler", en: "Items without a link" },
+      body: { tr: "`href` verilmeyen öğe `button` olarak çizilir ve `onClick` çalıştırır; görünümü bağlantılarla aynıdır. Oturumu kapatmak gibi sayfa açmayan birkaç eylem için uygundur. `renderLink` verilmişse her öğe ondan geçer, `href` olmasa bile düğme çizilmez. `aria-label` menünün `nav` öğesini adlandırır, `className` kök `aside` öğesine eklenir.", en: "An item without `href` renders as a `button` and runs `onClick`, looking the same as a link. It suits a few actions that open no page, such as signing out. With `renderLink`, every item goes through it, so no button is drawn even without `href`. `aria-label` names the menu's `nav` and `className` is added to the root `aside`." },
+      example: { Demo: ButtonItems, block: true, code: `const groups: NavGroup[] = [
+  { label: "Sales", items: [{ label: "Orders", href: "/orders", icon: <IconPackage size={16} /> }] },
+  {
+    label: "Session",
+    items: [
+      { label: "Refresh data", icon: <IconRefresh size={16} />, onClick: refresh },
+      { label: "Sign out", icon: <IconLogout size={16} />, onClick: signOut },
+    ],
+  },
+];
+
+<Sidebar aria-label="Main menu" className="erp-nav" logoText="Atlas ERP" groups={groups} />` },
     },
     {
       id: "render-link",
@@ -288,7 +329,7 @@ export function AppNav() {
     },
   ],
   a11y: [
-    { tr: "Öğeler `aside` içindeki `nav` öğesinde gerçek bağlantılar olarak çizilir; bağlantılar arasında `Tab` ile dolaşılır.", en: "Items are real links inside a `nav` within an `aside`, so `Tab` moves between them." },
+    { tr: "Öğeler `aside` içindeki `nav` öğesinde gerçek bağlantılar olarak çizilir; bağlantılar arasında `Tab` ile dolaşılır. Sayfada birden çok `nav` varsa `aria-label` ile adlandırın.", en: "Items are real links inside a `nav` within an `aside`, so `Tab` moves between them. With several `nav` elements on a page, name this one with `aria-label`." },
     { tr: "Açık sayfa `active` ile işaretlenince `aria-current=\"page\"` eklenir; renk tek başına kalmaz.", en: "Marking the current page with `active` adds `aria-current=\"page\"`, so colour does not stand alone." },
     { tr: "Her öğe `title` taşır; daralmış menüde görünür ad gizlense de öğenin adı okunur.", en: "Every item carries a `title`, so its name is still announced when the collapsed menu hides the visible label." },
     { tr: "`href` verilmeyen öğe gerçek bir `button` olarak çizilir, bu yüzden klavye ile ulaşılır ve çalıştırılır.", en: "An item without `href` renders as a real `button`, so it stays reachable and usable from the keyboard." },
@@ -296,7 +337,8 @@ export function AppNav() {
   keyboard: [
     ["Tab", { tr: "Sonraki menü bağlantısına geçer", en: "Moves to the next menu link" }],
     ["Shift + Tab", { tr: "Önceki menü bağlantısına döner", en: "Moves to the previous menu link" }],
-    ["Enter", { tr: "Odaktaki bağlantıya gider", en: "Follows the focused link" }],
+    ["Enter", { tr: "Odaktaki bağlantıya gider ya da düğmeyi çalıştırır", en: "Follows the focused link or presses the button" }],
+    ["Space", { tr: "`href` olmayan öğede düğmeyi çalıştırır", en: "Presses the button on an item without `href`" }],
   ],
   api: [
     {
@@ -307,6 +349,8 @@ export function AppNav() {
         { name: "logoText", type: "ReactNode", description: { tr: "İşaretin yanındaki ad; daralınca gizlenir", en: "Name beside the mark; hidden when collapsed" } },
         { name: "tone", type: '"dark" | "light"', default: '"dark"', description: { tr: "Menü tonu", en: "Menu tone" } },
         { name: "renderLink", type: '(props: ComponentPropsWithoutRef<"a"> & { "data-active"?: string }, item: NavItem) => ReactElement', description: { tr: "Yönlendiricinizin bağlantısını takar; özellikleri bağlantıya aktarın", en: "Plugs in your router's link; spread the props onto it" } },
+        { name: "aria-label", type: "string", description: { tr: "`nav` işaret noktasının adı", en: "Name of the `nav` landmark" } },
+        { name: "className", type: "string", description: { tr: "Kök `aside` öğesine eklenir", en: "Added to the root `aside`" } },
       ],
     },
     {
@@ -322,7 +366,7 @@ export function AppNav() {
       props: [
         { name: "label", type: "string", required: true, description: { tr: "Öğe adı", en: "Item name" } },
         { name: "icon", type: "ReactNode", description: { tr: "Addan önce gösterilir", en: "Shown before the name" } },
-        { name: "href", type: "string", description: { tr: "Bağlantı adresi", en: "Link target" } },
+        { name: "href", type: "string", description: { tr: "Bağlantı adresi. Verilmezse öğe `button` olur; `renderLink` varsa ondan geçer", en: "Link target. Without it the item is a `button`, unless `renderLink` is set" } },
         { name: "active", type: "boolean", description: { tr: "Açık sayfayı işaretler", en: "Marks the current page" } },
         { name: "count", type: "number", description: { tr: "Sayaç; sıfır ya da boşsa gösterilmez", en: "Badge number; hidden when zero or left out" } },
         { name: "onClick", type: "MouseEventHandler", description: { tr: "Tıklamada çalışır, ardından dar ekrandaki çekmece kapanır", en: "Runs on click, then the drawer closes on narrow screens" } },

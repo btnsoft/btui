@@ -114,16 +114,19 @@ function ClearOnDemand() {
 function MoreOpen() {
   const t = useText();
   const [owner, setOwner] = useState("Elif Kaya");
+  const [open, setOpen] = useState(true);
   const found = ORDERS.filter((o) => !owner || o.owner === owner).length;
   return (
     <div className="d-stack-wide">
       <FilterBar
-        moreOpen
+        aria-label={t({ tr: "Sipariş filtreleri", en: "Order filters" })}
+        moreOpen={open}
+        onMoreOpenChange={setOpen}
         more={<Select variant="filter" label={t({ tr: "Sorumlu", en: "Owner" })} placeholder={t({ tr: "Tümü", en: "All" })} options={OWNERS} value={owner} onChange={setOwner} clearable />}
       >
         <SearchInput placeholder={t({ tr: "Sipariş ara…", en: "Search orders…" })} />
       </FilterBar>
-      <p aria-live="polite" style={{ margin: 0, fontSize: 13 }}>{t({ tr: `Listelenen sipariş: ${found}`, en: `Orders listed: ${found}` })}</p>
+      <p aria-live="polite" style={{ margin: 0, fontSize: 13 }}>{t({ tr: `Listelenen sipariş: ${found}. Ek filtreler ${open ? "açık" : "kapalı"}.`, en: `Orders listed: ${found}. Extra filters are ${open ? "open" : "closed"}.` })}</p>
     </div>
   );
 }
@@ -233,11 +236,15 @@ const found = orders.filter((o) => o.no.includes(query) && (!city || o.city === 
     {
       id: "more-open",
       title: { tr: "Açık gelen ek filtreler", en: "Extra filters shown open" },
-      body: { tr: "`moreOpen` katlanan alanın `open` özniteliğini belirler. Adresten gelen bir filtre katlı alandaysa sayfayı açık başlatmak için kullanın; yoksa kullanıcı etkin filtreyi göremez. Kullanıcı alanı yine açıp kapatabilir, ancak bu değişiklik size bildirilmez.", en: "`moreOpen` sets the `open` attribute of the folded area. Use it to start open when a filter from the URL lives there; otherwise people cannot see the active filter. Users can still fold the area, but that change is not reported back to you." },
+      body: { tr: "`moreOpen` katlanan alanın `open` özniteliğini belirler. Adresten gelen bir filtre katlı alandaysa sayfayı açık başlatmak için kullanın; yoksa kullanıcı etkin filtreyi göremez. `onMoreOpenChange` her açıp kapatmayı bildirir, böylece tercihi saklayabilirsiniz. Bu örnekte `aria-label` de verildi: alan `role=\"search\"` alır ve bir işaret noktası olur.", en: "`moreOpen` sets the `open` attribute of the folded area. Use it to start open when a filter from the URL lives there; otherwise people cannot see the active filter. `onMoreOpenChange` reports each fold, so you can store the preference. This example also sets `aria-label`: the area takes `role=\"search\"` and becomes a landmark." },
       example: { Demo: MoreOpen, block: true, code: `const [owner, setOwner] = useState("Elif Kaya");
 
+const [open, setOpen] = useState(true);
+
 <FilterBar
-  moreOpen
+  aria-label="Order filters"
+  moreOpen={open}
+  onMoreOpenChange={setOpen}
   more={<Select variant="filter" label="Owner" placeholder="All" options={owners} value={owner} onChange={setOwner} clearable />}
 >
   <SearchInput placeholder="Search orders…" />
@@ -261,6 +268,7 @@ const found = orders.filter((o) => o.no.includes(query) && (!city || o.city === 
     },
   ],
   a11y: [
+    { tr: "`aria-label` verildiğinde alan `role=\"search\"` alır ve ekran okuyucuda arama işaret noktası olarak listelenir. Verilmezse rol eklenmez.", en: "With `aria-label` the area takes `role=\"search\"` and is listed as a search landmark by screen readers. Without it no role is added." },
     { tr: "Ek filtreler yerel `details` ve `summary` ile çizilir; aç kapat davranışı klavye ve ekran okuyucu ile hazır çalışır.", en: "Extra filters use native `details` and `summary`, so folding works with keyboards and screen readers out of the box." },
     { tr: "Temizleme gerçek bir `button` öğesidir, metni yerelleştirme dosyasından gelir.", en: "Clearing is a real `button`, and its text comes from the locale." },
     { tr: "Sonuç sayısı değiştiğinde ekran okuyucu fark etmez; sayıyı `aria-live=\"polite\"` taşıyan bir öğede gösterin.", en: "Screen readers do not notice a changed result count on their own, so show it in an element with `aria-live=\"polite\"`." },
@@ -278,6 +286,8 @@ const found = orders.filter((o) => o.no.includes(query) && (!city || o.city === 
         { name: "children", type: "ReactNode", required: true, description: { tr: "Her zaman görünen filtreler", en: "Filters that are always visible" } },
         { name: "more", type: "ReactNode", description: { tr: "\"Daha fazla filtre\" altında katlanan filtreler", en: "Filters folded under \"More filters\"" } },
         { name: "moreOpen", type: "boolean", description: { tr: "Katlanan alanın `open` özniteliği", en: "The `open` attribute of the folded area" } },
+        { name: "onMoreOpenChange", type: "(open: boolean) => void", description: { tr: "Katlanan alan her açılıp kapandığında çalışır", en: "Called each time the folded area opens or closes" } },
+        { name: "aria-label", type: "string", description: { tr: "Alanı adlandırır ve `role=\"search\"` ekler", en: "Names the area and adds `role=\"search\"`" } },
         { name: "onClear", type: "() => void", description: { tr: "Verildiğinde \"Filtreleri temizle\" düğmesi çizilir", en: "When passed, the \"Clear filters\" button is drawn" } },
         { name: "className", type: "string", description: { tr: "Kök öğeye eklenir", en: "Added to the root element" } },
       ],

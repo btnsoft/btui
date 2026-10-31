@@ -119,8 +119,21 @@ function EditForm() {
   );
 }
 
+function FromLeft() {
+  const t = useText();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>{t({ tr: "Filtreleri aç", en: "Open the filters" })}</Button>
+      <Drawer open={open} onClose={() => setOpen(false)} side="left" width={320} title={t({ tr: "Filtreler", en: "Filters" })} subtitle={t({ tr: "Sipariş listesi", en: "Order list" })} className="orders-filters">
+        <Field label={t({ tr: "Şehir", en: "City" })}><Select options={CITIES} defaultValue="İzmir" block /></Field>
+      </Drawer>
+    </>
+  );
+}
+
 export default definePage({
-  summary: { tr: "Ekranın sağından açılan bir panel. Kullanıcı listeden kopmadan bir kaydı inceler ya da düzenler. Durumu siz yönetirsiniz: `open` ve `onClose`.", en: "A panel that slides in from the right. People inspect or edit a record without losing their place in the list. You own the state through `open` and `onClose`." },
+  summary: { tr: "Ekranın kenarından açılan bir panel. Kullanıcı listeden kopmadan bir kaydı inceler ya da düzenler. Durumu siz yönetirsiniz: `open` ve `onClose`.", en: "A panel that slides in from the edge of the screen. People inspect or edit a record without losing their place in the list. You own the state through `open` and `onClose`." },
   imports: 'import { Drawer } from "btui";',
   base: "drawer",
   hero: {
@@ -145,7 +158,7 @@ export default definePage({
       { tr: "Ana gezinme; bunun için `Sidebar` vardır", en: "Main navigation; that is what `Sidebar` is for" },
     ],
   },
-  anatomy: `<Drawer open={open} onClose={close} title="Title" subtitle="Subtitle" width={420} footer={<Button />}>
+  anatomy: `<Drawer open={open} onClose={close} title="Title" subtitle="Subtitle" side="right" width={420} footer={<Button />}>
   Content
 </Drawer>`,
   examples: [
@@ -211,12 +224,23 @@ const show = (order: Order) => {
 </Drawer>`,
       },
     },
+    {
+      id: "side",
+      title: { tr: "Sol kenar", en: "Left edge" },
+      body: { tr: "`side` panelin açıldığı kenarı belirler, varsayılan `right`. Kayıt ayrıntısı sağda açılır; filtreler ya da içindekiler gibi sayfanın solunda duran içerikler için `left` daha doğaldır. Dokunmatik kaydırma yönü de kenara uyar. `className` panele sınıf ekler.", en: "`side` sets the edge the panel opens from, with `right` as the default. Record details open on the right, while `left` feels natural for content that lives on the left of a page, such as filters or a table of contents. The touch swipe direction follows the edge. `className` adds a class to the panel." },
+      example: {
+        Demo: FromLeft,
+        code: `<Drawer open={open} onClose={close} side="left" width={320} title="Filters" subtitle="Order list" className="orders-filters">
+  <Field label="City"><Select options={CITIES} defaultValue="İzmir" block /></Field>
+</Drawer>`,
+      },
+    },
   ],
   a11y: [
     { tr: "`role=\"dialog\"` taşır. `title` panelin adı, `subtitle` açıklaması olarak bağlanır.", en: "It carries `role=\"dialog\"`. `title` is tied in as the name of the panel and `subtitle` as its description." },
     { tr: "Açıkken odak panelin içinde kalır ve arkadaki sayfa etkileşime kapanır.", en: "While open, focus stays inside the panel and the page behind is blocked from interaction." },
     { tr: "Kapanınca odak paneli açan öğeye döner.", en: "When it closes, focus returns to the element that opened it." },
-    { tr: "Dokunmatik ekranda sağa kaydırmak paneli kapatır; kapatma düğmesi her zaman alternatif olarak durur.", en: "On touch screens a swipe to the right closes the panel, and the close button is always there as an alternative." },
+    { tr: "Dokunmatik ekranda panelin açıldığı kenara doğru kaydırmak onu kapatır; kapatma düğmesi her zaman alternatif olarak durur.", en: "On touch screens a swipe towards the panel's edge closes it, and the close button is always there as an alternative." },
   ],
   keyboard: [
     ["Tab", { tr: "Panel içindeki sonraki öğeye geçer", en: "Moves to the next element in the panel" }],
@@ -232,12 +256,15 @@ const show = (order: Order) => {
         { name: "title", type: "ReactNode", required: true, description: { tr: "Panel başlığı", en: "Panel title" } },
         { name: "subtitle", type: "ReactNode", description: { tr: "Başlığın altındaki kısa açıklama", en: "Short description below the title" } },
         { name: "width", type: "number", default: "420", description: { tr: "Genişlik, piksel. En fazla ekranın yüzde 92'si", en: "Width in pixels. At most 92 percent of the screen" } },
+        { name: "side", type: '"left" | "right"', default: '"right"', description: { tr: "Panelin açıldığı kenar", en: "The edge the panel opens from" } },
         { name: "footer", type: "ReactNode", description: { tr: "Sağa hizalı, sabit alt şerit", en: "Right-aligned, fixed bottom strip" } },
         { name: "children", type: "ReactNode", required: true, description: { tr: "Gövde içeriği; uzayınca kayar", en: "Body content; scrolls when it grows" } },
+        { name: "className", type: "string", description: { tr: "Panele eklenen sınıf", en: "Class added to the panel" } },
       ],
     },
   ],
   styling: [
+    { name: "data-side", kind: "data", description: { tr: "Panel ve kabı üzerinde seçili kenar", en: "The current edge, on the panel and its viewport" } },
     { name: "data-swiping", kind: "data", description: { tr: "Dokunmatik kaydırma sırasında bulunur; geçiş kapanır", en: "Present during a touch swipe; the transition is off" } },
     { name: "data-starting-style", kind: "data", description: { tr: "Açılış geçişinin ilk karesi", en: "First frame of the opening transition" } },
     { name: "data-ending-style", kind: "data", description: { tr: "Kapanış geçişi sırasında bulunur", en: "Present during the closing transition" } },

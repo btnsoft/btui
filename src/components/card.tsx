@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef, ReactNode } from "react";
+import { createContext, useContext, type ComponentPropsWithoutRef, type ReactNode } from "react";
 import { cx } from "../utils";
 
 export type CardProps = Omit<ComponentPropsWithoutRef<"section">, "title"> & {
@@ -37,10 +37,12 @@ export type KpiProps = {
   /** Colours the number only. The card itself stays neutral. */
   tone?: "neutral" | "ok" | "warn" | "danger";
   onClick?: () => void;
+  /** Marks a clickable card as the filter in use. */
+  active?: boolean;
   className?: string;
 };
 
-export function Kpi({ label, value, note, trend, icon, tone = "neutral", onClick, className }: KpiProps) {
+export function Kpi({ label, value, note, trend, icon, tone = "neutral", onClick, active, className }: KpiProps) {
   const body = (
     <>
       <span className="bt-kpi-label">{icon}{label}</span>
@@ -54,7 +56,7 @@ export function Kpi({ label, value, note, trend, icon, tone = "neutral", onClick
     </>
   );
   return onClick ? (
-    <button type="button" onClick={onClick} className={cx("bt-kpi", className)} data-tone={tone}>{body}</button>
+    <button type="button" onClick={onClick} aria-pressed={active === undefined ? undefined : active} data-active={active ? "" : undefined} className={cx("bt-kpi", className)} data-tone={tone}>{body}</button>
   ) : (
     <div className={cx("bt-kpi", className)} data-tone={tone}>{body}</div>
   );
@@ -64,11 +66,21 @@ export function KpiGrid({ className, ...rest }: ComponentPropsWithoutRef<"div">)
   return <div className={cx("bt-kpis", className)} {...rest} />;
 }
 
-export function InfoRow({ label, children }: { label: ReactNode; children: ReactNode }) {
+const InListContext = createContext(false);
+
+/** Groups InfoRows as a description list, so each label stays tied to its value. */
+export function InfoList({ className, children }: { className?: string; children: ReactNode }) {
+  return <dl className={cx("bt-info-list", className)}><InListContext.Provider value>{children}</InListContext.Provider></dl>;
+}
+
+export function InfoRow({ label, children, className }: { label: ReactNode; children: ReactNode; className?: string }) {
+  const inList = useContext(InListContext);
+  const Label = inList ? "dt" : "span";
+  const Value = inList ? "dd" : "span";
   return (
-    <div className="bt-info">
-      <span className="bt-info-label">{label}</span>
-      <span className="bt-info-value">{children}</span>
+    <div className={cx("bt-info", className)}>
+      <Label className="bt-info-label">{label}</Label>
+      <Value className="bt-info-value">{children}</Value>
     </div>
   );
 }

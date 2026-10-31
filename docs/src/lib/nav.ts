@@ -1,8 +1,8 @@
 import type { ComponentType } from "react";
 import {
-  IconAlertCircle, IconAlertTriangle, IconAppWindow, IconArrowsMoveVertical, IconBadge, IconBell, IconBook, IconBox, IconBrush, IconBulb, IconCalculator, IconCalendar, IconCalendarEvent, IconCalendarMonth, IconCards, IconCheckbox, IconChevronsRight,
+  IconAlertCircle, IconAlertTriangle, IconAppWindow, IconArrowsMoveVertical, IconBadge, IconBell, IconBook, IconBox, IconBrush, IconBulb, IconCalculator, IconCalendar, IconCalendarEvent, IconCalendarMonth, IconCards, IconChartArea, IconChartBar, IconChartBarPopular, IconChartDonut, IconChartLine, IconCheckbox, IconChevronsRight,
   IconCircleDot, IconClick, IconColumns3, IconDots, IconDownload, IconFileUpload, IconFilter, IconForms, IconHeading, IconId, IconKeyboard, IconLanguage, IconLayoutNavbar, IconLayoutSidebar,
-  IconLayoutSidebarRight, IconList, IconListCheck, IconLoader2, IconMessage, IconMoodEmpty, IconNumbers, IconPageBreak, IconPencil, IconPointFilled, IconProgress, IconSearch, IconSelect, IconSquares, IconTable, IconTableOptions, IconTag, IconTextSize, IconToggleLeft, IconUser, IconWindowMaximize,
+  IconLayoutSidebarRight, IconList, IconListCheck, IconLoader2, IconMessage, IconMoodEmpty, IconNumbers, IconPageBreak, IconPencil, IconPointFilled, IconProgress, IconSearch, IconSelect, IconSquares, IconTable, IconTableOptions, IconTag, IconTextSize, IconTimeline, IconToggleLeft, IconUser, IconWindowMaximize,
 } from "@tabler/icons-react";
 import type { Text } from "./i18n";
 
@@ -63,6 +63,17 @@ export const NAV: NavSection[] = [
       { id: "avatar", title: "Avatar", icon: IconUser },
       { id: "kbd", title: "Kbd", icon: IconKeyboard },
       { id: "empty-state", title: "EmptyState", icon: IconMoodEmpty },
+    ],
+  },
+  {
+    title: { tr: "Grafik", en: "Charts" },
+    pages: [
+      { id: "bar-chart", title: "BarChart", icon: IconChartBar },
+      { id: "line-chart", title: "LineChart", icon: IconChartLine },
+      { id: "area-chart", title: "AreaChart", icon: IconChartArea },
+      { id: "donut-chart", title: "DonutChart", icon: IconChartDonut },
+      { id: "sparkline", title: "Sparkline", icon: IconTimeline },
+      { id: "data-bar", title: "DataBar", icon: IconChartBarPopular },
     ],
   },
   {

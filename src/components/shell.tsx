@@ -1,4 +1,4 @@
-import { createContext, forwardRef, useCallback, useContext, useEffect, useMemo, useState, type ComponentPropsWithoutRef, type MouseEvent, type MouseEventHandler, type ReactElement, type ReactNode } from "react";
+import { createContext, forwardRef, useCallback, useContext, useEffect, useMemo, useRef, useState, type ComponentPropsWithoutRef, type MouseEvent, type MouseEventHandler, type ReactElement, type ReactNode } from "react";
 import { ChevronRight, Filter, Menu as MenuIcon, Search } from "../icons";
 import { useLocale } from "../locale";
 import { cx, flag, storageGet, storageSet } from "../utils";
@@ -45,21 +45,38 @@ export function AppShell({ sidebar, topbar, collapsed, defaultCollapsed = false,
 
   const closeNav = useCallback(() => setNavOpen(false), []);
 
+  // On a phone the menu acts as a dialog: focus goes in, and comes back when it closes.
+  const root = useRef<HTMLDivElement>(null);
+  const opener = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (navOpen) {
+      opener.current = document.activeElement as HTMLElement;
+      root.current?.querySelector<HTMLElement>(".bt-side a, .bt-side button")?.focus();
+    } else if (opener.current) {
+      opener.current.focus();
+      opener.current = null;
+    }
+  }, [navOpen]);
+
   useEffect(() => {
     if (!navOpen) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setNavOpen(false); };
+    // Growing past phone width leaves the drawer behind, so nothing may stay inert.
+    const wide = window.matchMedia(MOBILE);
+    const onWide = () => { if (!wide.matches) setNavOpen(false); };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    wide.addEventListener("change", onWide);
+    return () => { window.removeEventListener("keydown", onKey); wide.removeEventListener("change", onWide); };
   }, [navOpen]);
 
   const state = useMemo(() => ({ toggle, closeNav, navOpen }), [toggle, closeNav, navOpen]);
 
   return (
     <ShellContext.Provider value={state}>
-      <div className={cx("bt-root bt-app", className)} data-collapsed={flag(isCollapsed)} data-nav-open={flag(navOpen)}>
+      <div ref={root} className={cx("bt-root bt-app", className)} data-collapsed={flag(isCollapsed)} data-nav-open={flag(navOpen)}>
         {sidebar}
         <button type="button" className="bt-scrim-nav" aria-label={t.close} onClick={closeNav} />
-        <div className="bt-main">
+        <div className="bt-main" inert={navOpen || undefined}>
           {topbar}
           <main className="bt-content">{children}</main>
         </div>
@@ -87,19 +104,22 @@ export type SidebarProps = {
   tone?: "dark" | "light";
   /** Plug in your router's link. Receives the anchor props to spread. */
   renderLink?: (props: ComponentPropsWithoutRef<"a"> & { "data-active"?: string }, item: NavItem) => ReactElement;
+  /** Names the navigation landmark. */
+  "aria-label"?: string;
+  className?: string;
 };
 
-export function Sidebar({ logo, logoText, groups, tone = "dark", renderLink }: SidebarProps) {
+export function Sidebar({ logo, logoText, groups, tone = "dark", renderLink, "aria-label": ariaLabel, className }: SidebarProps) {
   const shell = useContext(ShellContext);
   return (
-    <aside className="bt-side" data-tone={tone}>
+    <aside className={cx("bt-side", className)} data-tone={tone}>
       {logo || logoText ? (
         <div className="bt-logo">
           {logo}
           {logoText ? <span className="bt-logo-text">{logoText}</span> : null}
         </div>
       ) : null}
-      <nav>
+      <nav aria-label={ariaLabel}>
         {groups.map((group, i) => (
           <div key={group.label ?? i}>
             {group.label ? <div className="bt-nav-group">{group.label}</div> : null}
@@ -161,7 +181,13 @@ export const TopbarSearch = forwardRef<HTMLInputElement, TopbarSearchProps>(func
 
 export type Crumb = { label: ReactNode; href?: string };
 
-export function Breadcrumb({ items }: { items: Crumb[] }) {
+export type BreadcrumbProps = {
+  items: Crumb[];
+  /** Plug in your router's link. */
+  renderLink?: (props: ComponentPropsWithoutRef<"a">, item: Crumb) => ReactElement;
+};
+
+export function Breadcrumb({ items, renderLink }: BreadcrumbProps) {
   const t = useLocale();
   return (
     <nav aria-label={t.breadcrumb}>
@@ -171,7 +197,7 @@ export function Breadcrumb({ items }: { items: Crumb[] }) {
           return (
             <li key={i}>
               {i > 0 ? <ChevronRight size={12} /> : null}
-              {item.href && !last ? <a href={item.href}>{item.label}</a> : <span aria-current={last ? "page" : undefined}>{item.label}</span>}
+              {item.href && !last ? (renderLink ? renderLink({ href: item.href, children: item.label }, item) : <a href={item.href}>{item.label}</a>) : <span aria-current={last ? "page" : undefined}>{item.label}</span>}
             </li>
           );
         })}
@@ -203,18 +229,21 @@ export type FilterBarProps = {
   /** Filters folded under "More filters". */
   more?: ReactNode;
   moreOpen?: boolean;
+  onMoreOpenChange?: (open: boolean) => void;
+  /** Names the filter area for assistive technology. */
+  "aria-label"?: string;
   /** Shows the "Clear filters" action. */
   onClear?: () => void;
   className?: string;
 };
 
-export function FilterBar({ children, more, moreOpen, onClear, className }: FilterBarProps) {
+export function FilterBar({ children, more, moreOpen, onMoreOpenChange, onClear, "aria-label": ariaLabel, className }: FilterBarProps) {
   const t = useLocale();
   return (
-    <div className={cx("bt-filter", className)}>
+    <div className={cx("bt-filter", className)} role={ariaLabel ? "search" : undefined} aria-label={ariaLabel}>
       <div className="bt-filter-row">{children}</div>
       {more ? (
-        <details className="bt-filter-more" open={moreOpen}>
+        <details className="bt-filter-more" open={moreOpen} onToggle={(e) => onMoreOpenChange?.(e.currentTarget.open)}>
           <summary><Filter size={14} />{t.moreFilters}</summary>
           <div className="bt-filter-row">{more}</div>
         </details>

@@ -291,3 +291,72 @@ export function parseNumber(text: string, lang: string) {
   const value = Number(clean);
   return clean === "" || Number.isNaN(value) ? null : value;
 }
+
+function trailingNumber(text: string) {
+  const match = /^(.*?)(\d+)$/.exec(text);
+  return match ? { head: match[1], digits: match[2], value: Number(match[2]) } : null;
+}
+
+/**
+ * Continues a selection the way a spreadsheet fill handle does: numbers, ISO dates and
+ * text ending in a number follow their step; anything else repeats.
+ */
+export function fillSeries(source: unknown[], count: number, backwards = false): unknown[] {
+  const seed = backwards ? [...source].reverse() : source;
+  const repeat = () => Array.from({ length: count }, (_, i) => seed[i % seed.length]);
+  const stepOf = (values: number[]) => {
+    if (values.length < 2) return null;
+    const step = values[1] - values[0];
+    return values.every((v, i) => i === 0 || v - values[i - 1] === step) ? step : null;
+  };
+  if (seed.every((v) => typeof v === "number")) {
+    const step = stepOf(seed as number[]);
+    if (step === null) return repeat();
+    const last = seed[seed.length - 1] as number;
+    return Array.from({ length: count }, (_, i) => last + step * (i + 1));
+  }
+  if (seed.every((v) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v))) {
+    const days = (seed as string[]).map((v) => Date.parse(`${v}T00:00:00Z`) / 86400000);
+    const step = stepOf(days) ?? (days.length === 1 ? 1 : null);
+    if (step === null) return repeat();
+    const last = days[days.length - 1];
+    return Array.from({ length: count }, (_, i) => new Date((last + step * (i + 1)) * 86400000).toISOString().slice(0, 10));
+  }
+  const parts = seed.map((v) => (typeof v === "string" ? trailingNumber(v) : null));
+  if (parts.every(Boolean) && parts.every((p) => p!.head === parts[0]!.head)) {
+    const step = stepOf(parts.map((p) => p!.value)) ?? (parts.length === 1 ? 1 : null);
+    if (step === null) return repeat();
+    const last = parts[parts.length - 1]!;
+    return Array.from({ length: count }, (_, i) => `${last.head}${String(Math.max(0, last.value + step * (i + 1))).padStart(last.digits.length, "0")}`);
+  }
+  return repeat();
+}
+
+export type TreeNode<T> = { row: T; key: string | number; level: number; children: TreeNode<T>[] };
+
+type TreeOptions<T> = {
+  childrenOf: (row: T) => T[] | undefined;
+  getKey: (row: T) => string | number;
+  /** Filter test. A match keeps its ancestors and all its descendants. */
+  keep: (row: T) => boolean;
+  order: (rows: T[]) => T[];
+};
+
+/** Filters and sorts each level of a hierarchy. Siblings stay together under their parent. */
+export function buildTree<T>(rows: T[], options: TreeOptions<T>, level = 0, ancestorMatched = false): TreeNode<T>[] {
+  const nodes: TreeNode<T>[] = [];
+  for (const row of options.order(rows)) {
+    const matched = ancestorMatched || options.keep(row);
+    const children = buildTree(options.childrenOf(row) ?? [], options, level + 1, matched);
+    if (matched || children.length > 0) nodes.push({ row, key: options.getKey(row), level, children });
+  }
+  return nodes;
+}
+
+export function leafRows<T>(node: TreeNode<T>): T[] {
+  return node.children.length === 0 ? [node.row] : node.children.flatMap(leafRows);
+}
+
+export function flattenTree<T>(nodes: TreeNode<T>[]): TreeNode<T>[] {
+  return nodes.flatMap((node) => [node, ...flattenTree(node.children)]);
+}

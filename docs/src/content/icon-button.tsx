@@ -12,9 +12,29 @@ function RowActions() {
       <IconButton label={t({ tr: "Siparişi düzenle", en: "Edit order" })}><IconPencil size={16} /></IconButton>
       <IconButton label={t({ tr: "Faturayı indir", en: "Download invoice" })}><IconDownload size={16} /></IconButton>
       <IconButton label={t({ tr: "Yazdır", en: "Print" })}><IconPrinter size={16} /></IconButton>
-      <IconButton label={t({ tr: "Siparişi sil", en: "Delete order" })}><IconTrash size={16} /></IconButton>
+      <IconButton tone="danger" label={t({ tr: "Siparişi sil", en: "Delete order" })}><IconTrash size={16} /></IconButton>
     </>
   );
+}
+
+function Danger() {
+  const t = useText();
+  return (
+    <>
+      <IconButton tone="danger" label={t({ tr: "Faturayı iptal et", en: "Void invoice" })}><IconTrash size={16} /></IconButton>
+      <IconButton tone="danger" size="sm" label={t({ tr: "Satırı kaldır", en: "Remove the line" })}><IconX size={14} /></IconButton>
+    </>
+  );
+}
+
+function Busy() {
+  const t = useText();
+  const [busy, setBusy] = useState(false);
+  const refresh = () => {
+    setBusy(true);
+    setTimeout(() => setBusy(false), 1500);
+  };
+  return <IconButton loading={busy} label={t({ tr: "Listeyi yenile", en: "Refresh the list" })} onClick={refresh}><IconRefresh size={16} /></IconButton>;
 }
 
 function Sizes() {
@@ -24,6 +44,7 @@ function Sizes() {
       <IconButton label={t({ tr: "Listeyi yenile", en: "Refresh the list" })}><IconRefresh size={16} /></IconButton>
       <IconButton size="sm" label={t({ tr: "Listeyi yenile", en: "Refresh the list" })}><IconRefresh size={14} /></IconButton>
       <IconButton solid label={t({ tr: "Listeyi yenile", en: "Refresh the list" })}><IconRefresh size={14} /></IconButton>
+      <IconButton solid size="sm" label={t({ tr: "Listeyi yenile", en: "Refresh the list" })}><IconRefresh size={13} /></IconButton>
     </>
   );
 }
@@ -110,7 +131,7 @@ export default definePage({
     code: `<IconButton label="Edit order"><IconPencil size={16} /></IconButton>
 <IconButton label="Download invoice"><IconDownload size={16} /></IconButton>
 <IconButton label="Print"><IconPrinter size={16} /></IconButton>
-<IconButton label="Delete order"><IconTrash size={16} /></IconButton>`,
+<IconButton tone="danger" label="Delete order"><IconTrash size={16} /></IconButton>`,
   },
   use: {
     do: [
@@ -124,15 +145,32 @@ export default definePage({
       { tr: "`ButtonGroup` içinde; grup yalnız `Button` çocuklarını birleştirir", en: "Inside a `ButtonGroup`; the group only joins `Button` children" },
     ],
   },
-  anatomy: `<IconButton label="Accessible name" size="md" solid={false}>
+  anatomy: `<IconButton label="Accessible name" size="md" tone="default" solid={false} loading={false}>
   <Icon size={16} />
 </IconButton>`,
   examples: [
     {
       id: "sizes",
       title: { tr: "Boyut ve dolgu", en: "Size and fill" },
-      body: { tr: "`md` 32px, `sm` 26px yer kaplar. `solid` düğmeyi dolgulu gösterir ve boyutu her zaman 28px'tir, `size` değerini dikkate almaz. İkonu da orantılı seçin: `md` için 16, `sm` ve `solid` için 14.", en: "`md` takes 32px and `sm` takes 26px. `solid` fills the button and is always 28px, whatever `size` says. Scale the icon too: 16 for `md`, 14 for `sm` and `solid`." },
-      example: { Demo: Sizes, code: `<IconButton label="Refresh the list"><IconRefresh size={16} /></IconButton>\n<IconButton size="sm" label="Refresh the list"><IconRefresh size={14} /></IconButton>\n<IconButton solid label="Refresh the list"><IconRefresh size={14} /></IconButton>` },
+      body: { tr: "`md` 32px, `sm` 26px yer kaplar. `solid` düğmeyi dolgulu gösterir ve `size` değerine uyar: `md` ile 28px, `sm` ile 24px. İkonu da orantılı seçin: `md` için 16, `sm` ve `solid` için 14, küçük `solid` için 13.", en: "`md` takes 32px and `sm` takes 26px. `solid` fills the button and follows `size`: 28px with `md` and 24px with `sm`. Scale the icon too: 16 for `md`, 14 for `sm` and `solid`, and 13 for a small `solid`." },
+      example: { Demo: Sizes, code: `<IconButton label="Refresh the list"><IconRefresh size={16} /></IconButton>\n<IconButton size="sm" label="Refresh the list"><IconRefresh size={14} /></IconButton>\n<IconButton solid label="Refresh the list"><IconRefresh size={14} /></IconButton>\n<IconButton solid size="sm" label="Refresh the list"><IconRefresh size={13} /></IconButton>` },
+    },
+    {
+      id: "tone",
+      title: { tr: "Yıkıcı ton", en: "Destructive tone" },
+      body: { tr: "`tone=\"danger\"` ikonu ve üzerine gelindiğindeki zemini kırmızı yapar. Silme ve iptal gibi eylemlerde kullanın. Ton yalnız görseldir; anlamı `label` söyler, geri alınamayan işlemi `useConfirm` ile doğrulatın.", en: "`tone=\"danger\"` turns the icon and the hover background red. Use it for actions such as delete and void. The tone is visual only: `label` carries the meaning, and irreversible work needs `useConfirm`." },
+      example: { Demo: Danger, code: `<IconButton tone="danger" label="Void invoice"><IconTrash size={16} /></IconButton>\n<IconButton tone="danger" size="sm" label="Remove the line"><IconX size={14} /></IconButton>` },
+    },
+    {
+      id: "loading",
+      title: { tr: "Yükleniyor", en: "Loading" },
+      body: { tr: "`loading` ikonun yerine dönen gösterge çizer, tıklamayı engeller ve odağı düğmede tutar. Boyut değişmez, yanındaki öğeler oynamaz. Düğmeye basıp deneyin.", en: "`loading` swaps the icon for a spinner, blocks clicks and keeps focus on the button. The size does not change, so nothing beside it moves. Press it to try." },
+      example: {
+        Demo: Busy,
+        code: `const [busy, setBusy] = useState(false);
+
+<IconButton loading={busy} label="Refresh the list" onClick={refresh}><IconRefresh size={16} /></IconButton>`,
+      },
     },
     {
       id: "table-row",
@@ -198,6 +236,7 @@ export default definePage({
   a11y: [
     { tr: "`label` zorunludur ve hem `aria-label` hem `title` olarak yazılır; ikon tek başına yardımcı teknolojiye bir şey söylemez.", en: "`label` is required and is written as both `aria-label` and `title`, because an icon alone tells assistive technology nothing." },
     { tr: "Etiket eylemi ve nesnesini söylesin: \"Sil\" yerine \"SP-1040 siparişini sil\".", en: "Let the label name the action and its object: \"Delete order SP-1040\" beats \"Delete\"." },
+    { tr: "`loading` sırasında `aria-busy` eklenir ve düğme odakta kalır; odak sayfanın başına düşmez.", en: "`loading` adds `aria-busy` and keeps the button focusable, so focus never jumps to the top of the page." },
     { tr: "`title` dokunmatik ekranda görünmez. Anlamı kritik eylemlerde görünür etiketli `Button` tercih edin.", en: "`title` never shows on touch screens. Prefer a labelled `Button` for actions whose meaning is critical." },
   ],
   keyboard: [
@@ -212,7 +251,9 @@ export default definePage({
       props: [
         { name: "label", type: "string", required: true, description: { tr: "Erişilebilir ad; `aria-label` ve `title` olarak yazılır", en: "Accessible name; written as `aria-label` and `title`" } },
         { name: "size", type: '"sm" | "md"', default: '"md"', description: { tr: "Kare ölçü: 26, 32px", en: "Square size: 26, 32px" } },
-        { name: "solid", type: "boolean", default: "false", description: { tr: "Dolgulu görünüm; satır eylemleri için, her zaman 28px", en: "Filled look for row actions; always 28px" } },
+        { name: "solid", type: "boolean", default: "false", description: { tr: "Dolgulu görünüm; satır eylemleri için. `size` değerine uyar: 28, 24px", en: "Filled look for row actions. Follows `size`: 28, 24px" } },
+        { name: "tone", type: '"default" | "danger"', default: '"default"', description: { tr: "`danger` yıkıcı eylemi işaretler", en: "`danger` marks a destructive action" } },
+        { name: "loading", type: "boolean", default: "false", description: { tr: "Dönen gösterge çizer, tıklamayı engeller, odağı korur", en: "Shows a spinner, blocks clicks, keeps focus" } },
         { name: "disabled", type: "boolean", default: "false", description: { tr: "Eylemi kapatır", en: "Turns the action off" } },
         { name: "focusableWhenDisabled", type: "boolean", default: "false", description: { tr: "Kapalıyken de odak alabilir", en: "Stays focusable while disabled" } },
         { name: "render", type: "ReactElement", description: { tr: "Başka bir öğe olarak çizer", en: "Renders as another element" } },
@@ -224,7 +265,10 @@ export default definePage({
   styling: [
     { name: "data-size", kind: "data", description: { tr: "Seçili boyut", en: "The current size" } },
     { name: "data-solid", kind: "data", description: { tr: "`solid` açıkken bulunur", en: "Present when `solid` is on" } },
+    { name: "data-tone", kind: "data", description: { tr: "Seçili ton", en: "The current tone" } },
+    { name: "data-loading", kind: "data", description: { tr: "Yükleme sürerken bulunur", en: "Present while loading" } },
     { name: "--bt-accent-strong", kind: "var", description: { tr: "`solid` zemini", en: "`solid` background" } },
+    { name: "--bt-danger", kind: "var", description: { tr: "`danger` ikon rengi", en: "`danger` icon colour" } },
     { name: "--bt-bg", kind: "var", description: { tr: "Fareyle üzerine gelindiğinde zemin", en: "Hover background" } },
     { name: "--bt-radius-lg", kind: "var", description: { tr: "Köşe yarıçapı", en: "Corner radius" } },
   ],

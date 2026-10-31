@@ -63,15 +63,13 @@ function SearchResult() {
         {rows.length > 0 ? (
           <ul style={{ margin: 0, padding: "8px 16px", listStyle: "none" }}>{rows.map((c) => <li key={c} style={{ padding: "4px 0" }}>{c}</li>)}</ul>
         ) : (
-          <div role="status">
-            <EmptyState
-              icon={<IconSearchOff size={20} />}
-              title={t({ tr: "Sonuç yok", en: "No results" })}
-              action={<Button size="sm" onClick={() => setQuery("")}>{t({ tr: "Aramayı temizle", en: "Clear search" })}</Button>}
-            >
-              {t({ tr: `"${query}" için müşteri bulunamadı.`, en: `No customers found for "${query}".` })}
-            </EmptyState>
-          </div>
+          <EmptyState
+            icon={<IconSearchOff size={20} />}
+            title={t({ tr: "Sonuç yok", en: "No results" })}
+            action={<Button size="sm" onClick={() => setQuery("")}>{t({ tr: "Aramayı temizle", en: "Clear search" })}</Button>}
+          >
+            {t({ tr: `"${query}" için müşteri bulunamadı.`, en: `No customers found for "${query}".` })}
+          </EmptyState>
         )}
       </Card>
     </div>
@@ -111,7 +109,7 @@ export default definePage({
     dont: [
       { tr: "Veri yüklenirken göstermek; önce `Loading` ya da `Skeleton` kullanın", en: "Showing it while data loads; use `Loading` or `Skeleton` first" },
       { tr: "Hata durumu; bağlantı sorunlarını `Alert` ile anlatın", en: "Error states; explain connection problems with `Alert`" },
-      { tr: "`DataTable` içinde; tablonun `empty` prop'u aynı çerçeveyi zaten çizer", en: "Inside `DataTable`; its `empty` prop already draws the same frame" },
+      { tr: "`DataTable` içinde; tablonun `empty` özelliği aynı çerçeveyi zaten çizer", en: "Inside `DataTable`; its `empty` prop already draws the same frame" },
     ],
   },
   anatomy: `<EmptyState icon={<Icon />} title="Title" action={<Button />}>
@@ -139,19 +137,17 @@ export default definePage({
     {
       id: "search",
       title: { tr: "Arama sonucu yok", en: "No search results" },
-      body: { tr: "`action` sıradaki adımı gösterir: aramayı değiştirmek için tek tıkla çıkış verin. Sonuç değişimini duyurmak için bileşeni `role=\"status\"` taşıyan bir öğe içine alın; `EmptyState` kendisi duyuru yapmaz. Kutuyu temizleyip listeye dönmeyi deneyin.", en: "`action` shows the next step, so offer a one click way out of the search. Wrap the component in an element with `role=\"status\"` to announce the change; `EmptyState` announces nothing itself. Clear the box to get back to the list." },
+      body: { tr: "`action` sıradaki adımı gösterir: aramayı değiştirmek için tek tıkla çıkış verin. `EmptyState` kendisi `role=\"status\"` taşır, ayrı bir sarmalayıcı gerekmez. Kutuyu temizleyip listeye dönmeyi deneyin.", en: "`action` shows the next step, so offer a one click way out of the search. `EmptyState` carries `role=\"status\"` itself, so it needs no extra wrapper. Clear the box to get back to the list." },
       example: {
         Demo: SearchResult,
         code: `{rows.length === 0 ? (
-  <div role="status">
-    <EmptyState
-      icon={<IconSearchOff size={20} />}
-      title="No results"
-      action={<Button size="sm" onClick={() => setQuery("")}>Clear search</Button>}
-    >
-      No customers found for "{query}".
-    </EmptyState>
-  </div>
+  <EmptyState
+    icon={<IconSearchOff size={20} />}
+    title="No results"
+    action={<Button size="sm" onClick={() => setQuery("")}>Clear search</Button>}
+  >
+    No customers found for "{query}".
+  </EmptyState>
 ) : <CustomerList rows={rows} />}`,
       },
     },
@@ -167,14 +163,14 @@ export default definePage({
     },
   ],
   a11y: [
-    { tr: "Sade bir `<div>` çizer ve canlı bölge değildir. İçerik sonradan değişiyorsa `role=\"status\"` taşıyan bir kaba alın.", en: "Renders a plain `<div>` and is not a live region. If the content appears later, place it in a container with `role=\"status\"`." },
+    { tr: "Kök `<div>` `role=\"status\"` taşır; arama ya da filtre sonucu boşaldığında ekran okuyucu iletiyi sırası gelince okur.", en: "The root `<div>` carries `role=\"status\"`, so when a search or filter comes back empty a screen reader reads the message in its turn." },
     { tr: "İkonlar süs amaçlıdır, anlamı metinde verin.", en: "Icons are decorative, so carry the meaning in the text." },
     { tr: "Eylem düğmesinin etiketi sonucu söylesin: \"Tamam\" yerine \"Fatura oluştur\".", en: "Let the button label say what happens: \"Create invoice\" rather than \"OK\"." },
   ],
   api: [
     {
       name: "EmptyState",
-      description: { tr: "Yerel öznitelikler iletilmez; yalnız aşağıdaki prop'lar geçerlidir.", en: "Native attributes are not forwarded; only the props below apply." },
+      description: { tr: "Yerel öznitelikler iletilmez; yalnız aşağıdaki özellikler geçerlidir.", en: "Native attributes are not forwarded; only the props below apply." },
       props: [
         { name: "icon", type: "ReactNode", description: { tr: "Üstte kare zemin içinde gösterilir", en: "Shown on a square background at the top" } },
         { name: "title", type: "ReactNode", description: { tr: "İletinin üstündeki kalın satır", en: "Bold line above the message" } },

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Field, NumberInput } from "btui";
+import { useRef, useState } from "react";
+import { Button, Field, NumberInput } from "btui";
 import { money } from "../lib/data";
 import { useLang, useText } from "../lib/i18n";
 import { definePage } from "../lib/schema";
@@ -77,6 +77,33 @@ function Disabled() {
   );
 }
 
+function Adornments() {
+  const t = useText();
+  return (
+    <div className="d-stack">
+      <Field label={t({ tr: "Birim fiyat", en: "Unit price" })}>
+        <NumberInput hideSteppers defaultValue={1450} prefix="₺" />
+      </Field>
+      <Field label={t({ tr: "Koli ağırlığı", en: "Box weight" })}>
+        <NumberInput defaultValue={18} min={1} suffix="kg" />
+      </Field>
+    </div>
+  );
+}
+
+function FocusField() {
+  const t = useText();
+  const input = useRef<HTMLInputElement>(null);
+  return (
+    <div className="d-stack">
+      <Field label={t({ tr: "Sayılan stok", en: "Counted stock" })}>
+        <NumberInput ref={input} defaultValue={0} min={0} />
+      </Field>
+      <div><Button size="sm" onClick={() => input.current?.select()}>{t({ tr: "Sonraki rafa geç", en: "Next shelf" })}</Button></div>
+    </div>
+  );
+}
+
 export default definePage({
   summary: { tr: "Sayısal değer girişi. Sınırları, adımı ve dile uygun biçimi sizin yerinize yönetir; adet, tutar ve oran alanları için uygundur.", en: "Numeric entry that manages limits, steps and locale-aware formatting for you. It suits quantity, amount and rate fields." },
   imports: 'import { NumberInput } from "btui";',
@@ -100,7 +127,7 @@ export default definePage({
     ],
   },
   anatomy: `<Field label="Label">
-  <NumberInput value={value} onChange={setValue} min={0} max={100} step={1} required name="fieldName" />
+  <NumberInput value={value} onChange={setValue} min={0} max={100} step={1} prefix="₺" suffix="kg" required name="fieldName" />
 </Field>`,
   examples: [
     {
@@ -108,6 +135,12 @@ export default definePage({
       title: { tr: "Para birimi", en: "Currency" },
       body: { tr: "`format` değeri `Intl.NumberFormat` seçenekleridir. Binlik ayracı ve ondalık işareti `BtuiProvider` dilinden gelir. Büyük tutarlarda `hideSteppers` ile düğmeleri kaldırın.", en: "`format` takes `Intl.NumberFormat` options. Grouping and decimal marks follow the `BtuiProvider` language. Remove the buttons on large amounts with `hideSteppers`." },
       example: { Demo: Currency, code: `<NumberInput hideSteppers defaultValue={18450.75} format={{ style: "currency", currency: "TRY" }} />` },
+    },
+    {
+      id: "adornments",
+      title: { tr: "Ön ek ve son ek", en: "Prefix and suffix" },
+      body: { tr: "`prefix` değerin önüne, `suffix` arkasına sabit bir içerik koyar: para işareti, `kg`, `adet`. İçerik girdinin parçası değildir, değerle birlikte gönderilmez ve `onChange` yalnız sayıyı bildirir. Birimi ekranda göstermek için en kısa yol budur. Tam para biçimi için `format` kullanın; ikisini birlikte vermeyin, işaret iki kez görünür.", en: "`prefix` puts fixed content before the value and `suffix` after it: a currency sign, `kg`, `pcs`. It is not part of the input, is not submitted with the value, and `onChange` reports only the number. This is the shortest way to show a unit. Use `format` for a full money format, and do not pass both, or the sign shows twice." },
+      example: { Demo: Adornments, code: `<NumberInput hideSteppers defaultValue={1450} prefix="₺" />\n<NumberInput defaultValue={18} min={1} suffix="kg" />` },
     },
     {
       id: "percent",
@@ -140,6 +173,15 @@ const total = (quantity ?? 0) * 1450;
       },
     },
     {
+      id: "ref",
+      title: { tr: "Ref ile odak", en: "Focus through a ref" },
+      body: { tr: "`ref` gerçek `input` öğesine iletilir, bu yüzden `focus` ve `select` doğrudan çalışır. Sayım gibi art arda giriş yapılan ekranlarda değeri seçili bırakır, kullanıcı yazmaya devam eder.", en: "`ref` reaches the real `input`, so `focus` and `select` work directly. On screens with entry after entry, such as a stock count, it leaves the value selected so people keep typing." },
+      example: { Demo: FocusField, code: `const input = useRef<HTMLInputElement>(null);
+
+<NumberInput ref={input} defaultValue={0} min={0} />
+<Button size="sm" onClick={() => input.current?.select()}>Next shelf</Button>` },
+    },
+    {
       id: "disabled",
       title: { tr: "Kapalı", en: "Disabled" },
       body: { tr: "`disabled` alanı ve düğmeleri birlikte kapatır, değer forma gönderilmez. Nedenini `hint` ile söyleyin.", en: "`disabled` turns off the field and its buttons together, and the value is not submitted. Give the reason in `hint`." },
@@ -162,7 +204,7 @@ const total = (quantity ?? 0) * 1450;
   api: [
     {
       name: "NumberInput",
-      description: { tr: "Yerel öznitelikler ve ref iletilmez; yalnız aşağıdaki proplar geçerlidir.", en: "Native attributes and the ref are not forwarded; only the props below apply." },
+      description: { tr: "Ref `input` öğesine iletilir. Yerel öznitelikler iletilmez; yalnız aşağıdaki özellikler geçerlidir.", en: "The ref reaches the `input`. Native attributes are not forwarded; only the props below apply." },
       props: [
         { name: "value", type: "number | null", description: { tr: "Denetimli değer", en: "Controlled value" } },
         { name: "defaultValue", type: "number", description: { tr: "Denetimsiz başlangıç değeri", en: "Uncontrolled initial value" } },
@@ -172,6 +214,8 @@ const total = (quantity ?? 0) * 1450;
         { name: "step", type: "number", default: "1", description: { tr: "Düğme ve ok tuşu adımı", en: "Step of the buttons and arrow keys" } },
         { name: "format", type: "Intl.NumberFormatOptions", description: { tr: "Görüntü biçimi; dil `BtuiProvider` üzerinden gelir", en: "Display format; the language comes from `BtuiProvider`" } },
         { name: "hideSteppers", type: "boolean", default: "false", description: { tr: "Eksi ve artı düğmelerini gizler", en: "Hides the minus and plus buttons" } },
+        { name: "prefix", type: "ReactNode", description: { tr: "Değerin önündeki sabit içerik, örn. para işareti", en: "Fixed content before the value, such as a currency sign" } },
+        { name: "suffix", type: "ReactNode", description: { tr: "Değerin arkasındaki sabit içerik, örn. birim", en: "Fixed content after the value, such as a unit" } },
         { name: "disabled", type: "boolean", default: "false", description: { tr: "Alanı ve düğmeleri kapatır", en: "Turns off the field and its buttons" } },
         { name: "required", type: "boolean", default: "false", description: { tr: "Alan boşken formun gönderilmesini engeller", en: "Blocks form submission while the field is empty" } },
         { name: "name", type: "string", description: { tr: "Form gönderiminde kullanılan ad", en: "Name used on form submission" } },

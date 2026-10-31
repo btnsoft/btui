@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
-import { Calendar, DatePicker, DateRangePicker, SearchInput, useToast, Accordion, Alert, Avatar, BtuiProvider, Checkbox, Button, DataTable, Sidebar, Tabs, Field, FileDropzone, Input, Modal, MultiSelect, NumberInput, RadioGroup, Select, Switch, pageRange, sortRows, useConfirm, type Column } from "../src";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { BarChart, DonutChart, LineChart, Sparkline, niceTicks, Calendar, DatePicker, DateRangePicker, IconButton, Menu, MenuGroup, MenuItem, SearchInput, SubMenu, Tooltip, useToast, Accordion, Alert, Avatar, BtuiProvider, Checkbox, Button, DataTable, Sidebar, Tabs, Field, FileDropzone, Input, Modal, MultiSelect, NumberInput, RadioGroup, Select, Switch, pageRange, sortRows, useConfirm, type Column } from "../src";
 import { fileMatchesAccept, includesText } from "../src/utils";
 import { buildCsv, buildXlsx, parseNumber, pivot, sortByMany } from "../src";
 import { FilterPanel } from "../src/components/table/parts";
-import { columnName, filterRows, groupRows, parseTsv, toTsv, type Column as GridColumn } from "../src/components/table/engine";
+import { buildTree, columnName, fillSeries, filterRows, groupRows, leafRows, parseTsv, toTsv, type Column as GridColumn } from "../src/components/table/engine";
 import { addMonths, dateOrder, firstDayOfWeek, monthGrid, parseDate } from "../src/date";
 
 type Row = { id: number; name: string; km: number | null };
@@ -735,5 +735,272 @@ describe("date picker wiring", () => {
     expect(end).toHaveAttribute("aria-invalid", "true");
     await user.click(screen.getByRole("button", { name: "Takvimi aç" }));
     expect(await screen.findByRole("button", { name: "Son 30 gün" })).toBeDisabled();
+  });
+});
+
+describe("fill series", () => {
+  it("continues numbers, dates and numbered text, repeats the rest", () => {
+    expect(fillSeries([5], 3)).toEqual([5, 5, 5]);
+    expect(fillSeries([2, 4], 3)).toEqual([6, 8, 10]);
+    expect(fillSeries([1, 2, 4], 4)).toEqual([1, 2, 4, 1]);
+    expect(fillSeries(["2026-10-30"], 3)).toEqual(["2026-10-31", "2026-11-01", "2026-11-02"]);
+    expect(fillSeries(["2026-01-01", "2026-01-08"], 1)).toEqual(["2026-01-15"]);
+    expect(fillSeries(["SP-009"], 2)).toEqual(["SP-010", "SP-011"]);
+    expect(fillSeries(["a", "b"], 3)).toEqual(["a", "b", "a"]);
+    expect(fillSeries([10, 20], 2, true)).toEqual([0, -10]);
+  });
+});
+
+describe("tree", () => {
+  type Dept = { id: number; name: string; cost?: number; kids?: Dept[] };
+  const org: Dept[] = [
+    { id: 1, name: "Operasyon", kids: [{ id: 2, name: "Depo", cost: 10 }, { id: 3, name: "Lojistik", kids: [{ id: 4, name: "Şoför", cost: 5 }, { id: 5, name: "Filo", cost: 7 }] }] },
+    { id: 6, name: "Finans", cost: 3 },
+  ];
+  const columns: Column<Dept>[] = [{ key: "name", header: "Birim" }, { key: "cost", header: "Maliyet", type: "number", aggregate: "sum" }];
+
+  it("keeps ancestors of a match and all descendants of a matched parent", () => {
+    const opts = { childrenOf: (r: Dept) => r.kids, getKey: (r: Dept) => r.id, order: (l: Dept[]) => l };
+    const names = (q: string) => buildTree(org, { ...opts, keep: (r) => r.name.includes(q) }).map((n) => [n.row.name, n.children.map((c) => c.row.name)]);
+    expect(names("Filo")).toEqual([["Operasyon", ["Lojistik"]]]);
+    expect(names("Lojistik")).toEqual([["Operasyon", ["Lojistik"]]]);
+    const lojistik = buildTree(org, { ...opts, keep: (r) => r.name === "Lojistik" })[0].children[0];
+    expect(lojistik.children.map((c) => c.row.name)).toEqual(["Şoför", "Filo"]);
+    expect(leafRows(buildTree(org, { ...opts, keep: () => true })[0]).map((r) => r.name)).toEqual(["Depo", "Şoför", "Filo"]);
+  });
+
+  it("opens levels, rolls leaf totals up and sums only leaves in the footer", async () => {
+    const user = userEvent.setup();
+    render(<BtuiProvider><DataTable columns={columns} rows={org} getRowKey={(r) => r.id} getChildren={(r) => r.kids} totals /></BtuiProvider>);
+    expect(screen.queryByText("Depo")).toBeNull();
+    const parent = screen.getByText("Operasyon").closest("tr")!;
+    expect(within(parent).getByText("22")).toBeInTheDocument();
+    expect(screen.getByRole("table").querySelector("tfoot")).toHaveTextContent("25");
+    await user.click(within(parent).getByRole("button"));
+    expect(screen.getByText("Depo")).toBeInTheDocument();
+  });
+
+  it("loads children on first open", async () => {
+    const user = userEvent.setup();
+    const loadChildren = vi.fn(async () => [{ id: 9, name: "Sonradan" }]);
+    render(<BtuiProvider><DataTable columns={columns} rows={[{ id: 8, name: "Kök" }]} getRowKey={(r) => r.id} hasChildren={() => true} loadChildren={loadChildren} /></BtuiProvider>);
+    await user.click(within(screen.getByText("Kök").closest("tr")!).getByRole("button"));
+    expect(await screen.findByText("Sonradan")).toBeInTheDocument();
+    expect(loadChildren).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("gaps", () => {
+  it("Select works uncontrolled with defaultValue", async () => {
+    const user = userEvent.setup();
+    render(<BtuiProvider><Select aria-label="Tür" defaultValue="a" options={[{ value: "a", label: "Bir" }, { value: "b", label: "İki" }]} /></BtuiProvider>);
+    const box = screen.getByRole("combobox", { name: "Tür" });
+    expect(box).toHaveTextContent("Bir");
+    await user.click(box);
+    await user.click(await screen.findByRole("option", { name: "İki" }));
+    expect(box).toHaveTextContent("İki");
+  });
+
+  it("MultiSelect selects all and clears", async () => {
+    const user = userEvent.setup();
+    const Demo = () => { const [v, s] = useState<string[]>([]); return <BtuiProvider><MultiSelect aria-label="İl" value={v} onChange={s} options={["a", "b", "c", "d", "e", "f"].map((x) => ({ value: x, label: x }))} /></BtuiProvider>; };
+    render(<Demo />);
+    await user.click(screen.getByLabelText("İl"));
+    await user.click(await screen.findByRole("button", { name: "Tümünü seç" }));
+    expect(screen.getByLabelText("İl")).toHaveTextContent("6 seçili");
+    await user.click(screen.getByRole("button", { name: "Temizle" }));
+    expect(screen.getByLabelText("İl")).not.toHaveTextContent("seçili");
+  });
+
+  it("toast can be updated and closed by id, and errors are urgent", async () => {
+    let api: ReturnType<typeof useToast>;
+    const Grab = () => { api = useToast(); return null; };
+    render(<BtuiProvider><Grab /></BtuiProvider>);
+    let id = "";
+    act(() => { id = api!({ title: "Kaydediliyor", timeout: 0 }); });
+    expect(await screen.findByText("Kaydediliyor")).toBeInTheDocument();
+    act(() => api!.update(id, { title: "Kaydedildi", tone: "ok" }));
+    expect(await screen.findByText("Kaydedildi")).toBeInTheDocument();
+    act(() => api!.close(id));
+    await waitFor(() => expect(screen.queryByText("Kaydedildi")).toBeNull());
+  });
+
+  it("Tooltip drops the native title of its trigger", () => {
+    render(<BtuiProvider><Tooltip content="İpucu"><IconButton label="Yazdır">x</IconButton></Tooltip></BtuiProvider>);
+    expect(screen.getByRole("button", { name: "Yazdır" })).not.toHaveAttribute("title");
+  });
+
+  it("Menu renders links, groups and submenus", async () => {
+    const user = userEvent.setup();
+    render(<BtuiProvider><Menu trigger={<Button>Aç</Button>}><MenuGroup label="Rapor"><MenuItem href="/x">Bağlantı</MenuItem></MenuGroup><SubMenu label="Dışa aktar"><MenuItem>Excel</MenuItem></SubMenu></Menu></BtuiProvider>);
+    await user.click(screen.getByRole("button", { name: "Aç" }));
+    expect((await screen.findByRole("menuitem", { name: "Bağlantı" })).closest("a,[href]")).toHaveAttribute("href", "/x");
+    expect(screen.getByRole("group", { name: "Rapor" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Dışa aktar" })).toHaveAttribute("aria-haspopup", "menu");
+  });
+
+  it("server table keeps its page count when the last page is short", () => {
+    const onPageChange = vi.fn();
+    const { rerender } = render(<DataTable columns={[{ key: "id", header: "No" }]} rows={[{ id: 1 }, { id: 2 }]} getRowKey={(r) => r.id} server={{ total: 5, page: 1, onPageChange }} />);
+    expect(screen.getByRole("button", { name: "3" })).toBeInTheDocument();
+    rerender(<DataTable columns={[{ key: "id", header: "No" }]} rows={[{ id: 5 }]} getRowKey={(r) => r.id} server={{ total: 5, page: 3, onPageChange }} />);
+    expect(screen.getByRole("button", { name: "3" })).toHaveAttribute("aria-current", "page");
+  });
+
+  it("offers selecting every page once a page is checked", async () => {
+    const user = userEvent.setup();
+    const Demo = () => { const [k, s] = useState<Array<string | number>>([]); return <DataTable columns={[{ key: "id", header: "No" }]} rows={[1, 2, 3].map((id) => ({ id }))} getRowKey={(r) => r.id} pageSize={2} selectedKeys={k} onSelectionChange={s} bulkActions={<i />} />; };
+    render(<Demo />);
+    await user.click(screen.getByRole("checkbox", { name: "Tümünü seç" }));
+    await user.click(screen.getByRole("button", { name: "3 kaydın tümünü seç" }));
+    expect(screen.getByText("3 seçili")).toBeInTheDocument();
+  });
+});
+
+describe("charts", () => {
+  const data = [{ m: "Oca", a: 10, b: 4 }, { m: "Şub", a: 20, b: 6 }];
+  const series = [{ key: "a", label: "Anka" }, { key: "b", label: "Bursa" }];
+
+  it("rounds ticks and always keeps zero", () => {
+    expect(niceTicks(0, 95)).toEqual([0, 25, 50, 75, 100]);
+    expect(niceTicks(-40, 80)[0]).toBeLessThanOrEqual(-40);
+    expect(niceTicks(-40, 80)).toContain(0);
+    expect(niceTicks(0, 0)).toEqual([0, 1]);
+  });
+
+  it("offers a table with the same numbers and a legend for two series", async () => {
+    const user = userEvent.setup();
+    render(<BtuiProvider><BarChart label="Satış" data={data} x={(d) => d.m} series={series} /></BtuiProvider>);
+    expect(screen.getByText("Anka")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Tablo" }));
+    const row = screen.getByRole("rowheader", { name: "Şub" }).closest("tr")!;
+    expect(row).toHaveTextContent("Şub206");
+  });
+
+  it("hides the legend for a single series", () => {
+    render(<BtuiProvider><LineChart label="Satış" data={data} x={(d) => d.m} series={[series[0]]} /></BtuiProvider>);
+    expect(document.querySelector(".bt-legend")).toBeNull();
+  });
+
+  it("folds extra donut slices into Other and shows shares", async () => {
+    const user = userEvent.setup();
+    const many = ["a", "b", "c", "d"].map((n, i) => ({ n, v: 40 - i * 10 }));
+    render(<BtuiProvider><DonutChart label="Pay" data={many} x={(d) => d.n} value={(d) => d.v} maxSlices={3} /></BtuiProvider>);
+    expect(screen.getByText("Diğer")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Tablo" }));
+    expect(screen.getByRole("rowheader", { name: "d" }).closest("tr")).toHaveTextContent("10");
+  });
+
+  it("describes a sparkline in words", () => {
+    render(<BtuiProvider><Sparkline values={[1, 5, 3]} /></BtuiProvider>);
+    expect(screen.getByRole("img")).toHaveAccessibleName("Eğilim: 1 değerinden 3 değerine, en yüksek 5");
+  });
+});
+
+describe("second review", () => {
+  beforeAll(() => { Object.defineProperty(HTMLElement.prototype, "clientWidth", { configurable: true, get: () => 600 }); });
+  afterAll(() => { delete (HTMLElement.prototype as unknown as { clientWidth?: number }).clientWidth; });
+  const data = [{ m: "Oca", a: 10 }, { m: "Şub", a: 20 }];
+  const series = [{ key: "a", label: "Anka" }];
+
+  it("redraws after the table view and when data arrives late", async () => {
+    const user = userEvent.setup();
+    const { container, rerender } = render(<BtuiProvider><BarChart label="S" data={[] as typeof data} x={(d) => d.m} series={series} /></BtuiProvider>);
+    rerender(<BtuiProvider><BarChart label="S" data={data} x={(d) => d.m} series={series} /></BtuiProvider>);
+    expect(container.querySelectorAll(".bt-chart-bar")).toHaveLength(2);
+    await user.click(screen.getByRole("button", { name: "Tablo" }));
+    await user.click(screen.getByRole("button", { name: "Grafik" }));
+    expect(container.querySelectorAll(".bt-chart-bar")).toHaveLength(2);
+  });
+
+  it("marks a lone point and splits area fills at gaps", () => {
+    const gaps = [{ m: "a", v: 1 }, { m: "b", v: null }, { m: "c", v: 3 }, { m: "d", v: null }, { m: "e", v: 5 }, { m: "f", v: 6 }];
+    const { container } = render(<BtuiProvider><LineChart area label="S" data={gaps} x={(d) => d.m} series={[{ key: "v", label: "V" }]} /></BtuiProvider>);
+    expect(container.querySelectorAll(".bt-chart-wash")).toHaveLength(3);
+    expect(container.querySelectorAll("circle:not(.bt-chart-dot)")).toHaveLength(2);
+  });
+
+  it("can leave zero off a line axis", () => {
+    expect(niceTicks(92, 98, 5, false)[0]).toBeGreaterThan(0);
+    expect(niceTicks(92, 98)).toContain(0);
+  });
+
+  it("donut steps with Home and End and lists folded slices in its table", async () => {
+    const user = userEvent.setup();
+    const many = ["a", "b", "c", "d"].map((n, i) => ({ n, v: 40 - i * 10 }));
+    render(<BtuiProvider><DonutChart label="Pay" data={many} x={(d) => d.n} value={(d) => d.v} maxSlices={3} /></BtuiProvider>);
+    screen.getByRole("group", { name: "Pay" }).focus();
+    await user.keyboard("{End}");
+    expect(screen.getByRole("status")).toHaveTextContent("Diğer");
+    await user.click(screen.getByRole("button", { name: "Tablo" }));
+    expect(screen.getByRole("rowheader", { name: "d" })).toBeInTheDocument();
+  });
+
+  type D = { id: number; day: string; note: string; qty: number };
+  function Grid({ onEdit }: { onEdit: (c: Array<{ key: string; value: unknown }>) => void }) {
+    const [rows, setRows] = useState<D[]>([{ id: 1, day: "2026-05-01", note: "İzmir", qty: 4 }]);
+    const cols: Column<D>[] = [
+      { key: "note", header: "Not", editable: true },
+      { key: "day", header: "Gün", type: "date", editable: true, format: (v) => `Gün ${v}` },
+      { key: "qty", header: "Adet", type: "number", editable: true },
+    ];
+    return <BtuiProvider><DataTable cellSelection controls={false} columns={cols} rows={rows} getRowKey={(r) => r.id} onCellEdit={(c) => { onEdit(c); setRows((l) => l.map((row) => c.reduce((a, x) => ({ ...a, [x.key]: x.value }), row))); }} /></BtuiProvider>;
+  }
+
+  it("edits the raw value of a formatted date", async () => {
+    const user = userEvent.setup();
+    const onEdit = vi.fn();
+    const { container } = render(<Grid onEdit={onEdit} />);
+    await user.dblClick(screen.getAllByRole("gridcell")[1]);
+    const box = container.querySelector<HTMLInputElement>(".bt-cell-edit")!;
+    expect(box.value).toBe("2026-05-01");
+    await user.keyboard("{Enter}");
+    expect(onEdit).not.toHaveBeenCalled();
+  });
+
+  it("keeps wrong types out of a sideways fill", async () => {
+    const user = userEvent.setup();
+    const onEdit = vi.fn();
+    render(<Grid onEdit={onEdit} />);
+    const cells = screen.getAllByRole("gridcell");
+    fireEvent.pointerDown(cells[0], { button: 0 });
+    fireEvent.pointerOver(cells[2]);
+    fireEvent.pointerUp(window);
+    screen.getByRole("grid").focus();
+    await user.keyboard("{Control>}r{/Control}");
+    expect(onEdit).not.toHaveBeenCalled();
+  });
+
+  type Dept = { id: number; name: string; cost?: number; kids?: Dept[] };
+  const org: Dept[] = [{ id: 1, name: "Küçük", kids: [{ id: 2, name: "x", cost: 1 }] }, { id: 3, name: "Büyük", kids: [{ id: 4, name: "y", cost: 9 }] }];
+  const cols: Column<Dept>[] = [{ key: "name", header: "Birim" }, { key: "cost", header: "Maliyet", type: "number", aggregate: "sum" }];
+
+  it("sorts tree parents by their rollup and counts open rows", async () => {
+    const user = userEvent.setup();
+    render(<BtuiProvider><DataTable cellSelection columns={cols} rows={org} getRowKey={(r) => r.id} getChildren={(r) => r.kids} /></BtuiProvider>);
+    expect(screen.getByRole("treegrid")).toHaveAttribute("aria-rowcount", "3");
+    await user.click(screen.getByRole("button", { name: /Maliyet/ }));
+    await user.click(screen.getByRole("button", { name: /Maliyet/ }));
+    const names = screen.getAllByRole("row").slice(1).map((r) => r.textContent);
+    expect(names[0]).toContain("Büyük");
+  });
+
+  it("fetches children for rows that start open, and survives a failure", async () => {
+    const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const loadChildren = vi.fn(async (row: Dept) => { if (row.id === 2) throw new Error("olmadı"); return [{ id: 9, name: "Yüklendi" }]; });
+    render(<BtuiProvider><DataTable columns={cols} rows={[{ id: 1, name: "A" }, { id: 2, name: "B" }]} getRowKey={(r) => r.id} hasChildren={(r) => r.id < 3} loadChildren={loadChildren} defaultExpanded={1} /></BtuiProvider>);
+    expect(await screen.findByText("Yüklendi")).toBeInTheDocument();
+    await waitFor(() => expect(within(screen.getByText("B").closest("tr")!).getByRole("button")).toHaveAttribute("aria-expanded", "false"));
+    expect(loadChildren).toHaveBeenCalledTimes(2);
+    quiet.mockRestore();
+  });
+
+  it("follows a changed pageSize prop", () => {
+    const rows = [1, 2, 3, 4, 5].map((id) => ({ id }));
+    const c = [{ key: "id", header: "No" }];
+    const { rerender } = render(<DataTable columns={c} rows={rows} getRowKey={(r) => r.id} pageSize={2} />);
+    expect(screen.getByText("1-2 / 5 kayıt")).toBeInTheDocument();
+    rerender(<DataTable columns={c} rows={rows} getRowKey={(r) => r.id} pageSize={5} />);
+    expect(screen.getByText("1-5 / 5 kayıt")).toBeInTheDocument();
   });
 });

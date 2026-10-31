@@ -49,12 +49,12 @@ export default function Home() {
   const t = useText();
   const lang = useLang();
   const features = [
-    { icon: IconTable, title: { tr: "Lisanssız güçlü ızgara", en: "A serious grid, no licence" }, text: { tr: "100 bin satır, filtre, gruplama, pivot, Excel, hücre seçimi ve yerinde düzenleme. Lisans ücreti yok.", en: "100k rows, filters, grouping, pivot, Excel, cell selection and inline editing. No licence fee." } },
+    { icon: IconTable, title: { tr: "Lisanssız güçlü ızgara", en: "A serious grid, no licence" }, text: { tr: "100 bin satır, filtre, gruplama, ağaç veri, pivot, Excel, doldurma tutamacı, tablodan grafik. Lisans ücreti yok.", en: "100k rows, filters, grouping, tree data, pivot, Excel, fill handle and charts from the table. No licence fee." } },
     { icon: IconLayoutGrid, title: { tr: "Keskin ve yoğun", en: "Sharp and dense" }, text: { tr: "Kurumsal ekranlar için tasarlandı: az köşe, az gölge, çok bilgi.", en: "Made for corporate screens: few curves, few shadows, plenty of information." } },
     { icon: IconKeyboard, title: { tr: "Erişilebilir temel", en: "Accessible core" }, text: { tr: "Klavye, odak ve ekran okuyucu davranışı Base UI'dan gelir.", en: "Keyboard, focus and screen reader behaviour come from Base UI." } },
     { icon: IconLanguage, title: { tr: "Türkçe doğru çalışır", en: "Turkish done right" }, text: { tr: "Arama \"izmir\" yazınca \"İzmir\"i bulur, sıralama Ç ve Ş'yi doğru yere koyar.", en: "Search matches \"İzmir\" from \"izmir\", sorting places Ç and Ş correctly." } },
     { icon: IconMoon, title: { tr: "Değişkenlerle tema", en: "Themed with variables" }, text: { tr: "Bütün renkler CSS değişkeni. Koyu tema hazır gelir.", en: "Every colour is a CSS variable. Dark theme is included." } },
-    { icon: IconBrandGithub, title: { tr: "Küçük bağımlılık", en: "Small footprint" }, text: { tr: "Tek çalışma zamanı bağımlılığı Base UI. Tailwind gerekmez.", en: "Base UI is the only runtime dependency. No Tailwind required." } },
+    { icon: IconBrandGithub, title: { tr: "Küçük bağımlılık", en: "Small footprint" }, text: { tr: "Tek çalışma zamanı bağımlılığı Base UI. Grafik, Excel ve tarih için ek paket yok, Tailwind gerekmez.", en: "Base UI is the only runtime dependency. No extra packages for charts, Excel or dates, and no Tailwind." } },
   ];
   return (
     <div className="h-home">

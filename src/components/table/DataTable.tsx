@@ -7,9 +7,10 @@ import { cx, flag, storageGet, storageSet } from "../../utils";
 import { Button } from "../button";
 import { Checkbox, SearchInput } from "../form";
 import { Loading, Spinner } from "../display";
-import { Menu, MenuItem, MenuSeparator } from "../overlay";
+import { SelectionChart, type ChartPickerProps } from "../chart";
+import { Menu, MenuItem, MenuSeparator, Modal } from "../overlay";
 import { Select } from "../select";
-import { aggregate, aggregateColumn, filterRows, groupRows, isBlank, isFilterActive, parseNumber, parseTsv, readValue, sortByMany, textOf, toTsv, type CellChange, type Column, type ColumnFilter, type Filters, type GroupNode, type SortState } from "./engine";
+import { aggregate, aggregateColumn, buildTree, fillSeries, filterRows, flattenTree, groupRows, isBlank, leafRows, isFilterActive, parseNumber, parseTsv, readValue, sortByMany, textOf, toTsv, type CellChange, type Column, type ColumnFilter, type Filters, type GroupNode, type SortState, type TreeNode } from "./engine";
 import { filterKind, FilterPanel, Pagination } from "./parts";
 import { useDataSource, type DataSource } from "./useDataSource";
 import { buildCsv, buildXlsx, download, type SheetCell, type SheetColumn } from "./xlsx";
@@ -82,6 +83,14 @@ export type DataTableProps<T> = {
   detailHeight?: number;
   /** Server row model: blocks of rows load as the user scrolls. Turns on `virtual`. */
   dataSource?: DataSource<T>;
+  /** Tree data: returns a row's children. `rows` then holds only the top level. */
+  getChildren?: (row: T) => T[] | undefined;
+  /** Says a row can open before its children are loaded. Use with `loadChildren`. */
+  hasChildren?: (row: T) => boolean;
+  /** Fetches children on first open. */
+  loadChildren?: (row: T) => Promise<T[]>;
+  /** `true` opens the whole tree, a number opens that many levels. */
+  defaultExpanded?: boolean | number;
   /** Starting row density. A value saved under `storageKey` wins. */
   defaultDensity?: "comfortable" | "compact";
   /** localStorage key that remembers the layout: columns, widths, pins, sort, filters, grouping, density. */
@@ -94,7 +103,7 @@ export type DataTableProps<T> = {
   /** Page size choices in the footer. */
   pageSizeOptions?: number[];
   /** Server mode: `rows` is the current page. Sorting and filters are reported, not applied. */
-  server?: { total: number; page: number; onPageChange: (page: number) => void };
+  server?: { total: number; page: number; onPageChange: (page: number) => void; onPageSizeChange?: (size: number) => void };
   sort?: SortState | null;
   defaultSort?: SortState | null;
   /** Second argument holds every sort level. Hold Shift on a header to add a level. */
@@ -118,7 +127,7 @@ export type DataTableProps<T> = {
 
 type Key = string | number;
 type Display<T> =
-  | { kind: "row"; row: T; key: Key }
+  | { kind: "row"; row: T; key: Key; node?: TreeNode<T> }
   | { kind: "group"; node: GroupNode<T>; open: boolean }
   | { kind: "detail"; row: T; key: Key }
   | { kind: "pending"; index: number };
@@ -139,14 +148,17 @@ export function DataTable<T>(props: DataTableProps<T>) {
   const {
     columns, rows, getRowKey, title, titleNote, icon, chips, actions, bandTone = "plain", controls, advanced,
     searchable = advanced, search, onSearchChange, filterable = advanced, filters: controlledFilters, defaultFilters, onFiltersChange,
-    resizable = advanced, reorderable = advanced, pinnable = advanced, groupable = advanced,
+    resizable = advanced, reorderable = advanced, pinnable = advanced, groupable: groupableProp = advanced,
     groupBy: controlledGroupBy, defaultGroupBy, onGroupByChange, totals, cellSelection = advanced, onCellEdit,
     exportable = advanced, exportFileName = "export", contextMenu, dataSource, rowHeight, detailHeight = 180,
+    getChildren, hasChildren, loadChildren, defaultExpanded = false,
     defaultDensity = "comfortable", storageKey, initialState, onStateChange, pageSize, pageSizeOptions, server,
     sort, defaultSort = null, onSortChange, loading, empty, onRowClick, selectedKey, selectedKeys, onSelectionChange, bulkActions,
     renderDetail, rowClassName, footerNote, maxHeight, className,
   } = props;
   const virtual = props.virtual || !!dataSource;
+  // A tree already has its hierarchy, so grouping it would only hide the column.
+  const groupable = groupableProp && !(props.getChildren || props.loadChildren);
   const t = useLocale();
   const g = t.grid;
   const uid = useId();
@@ -164,6 +176,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
   const [ownSearch, setOwnSearch] = useState("");
   const [ownPage, setOwnPage] = useState(1);
   const [ownPageSize, setOwnPageSize] = useState(pageSize);
+  useEffect(() => setOwnPageSize(pageSize), [pageSize]);
   const [expanded, setExpanded] = useState<Set<Key>>(() => new Set());
   const [closedGroups, setClosedGroups] = useState<Set<string>>(() => new Set());
 
@@ -214,12 +227,89 @@ export function DataTable<T>(props: DataTableProps<T>) {
 
   const source = useDataSource(dataSource, { sorts, filters, search: searchText });
 
+  const isTree = !!(getChildren || loadChildren);
+  const [loaded, setLoaded] = useState<Map<Key, T[]>>(() => new Map());
+  const [loadingKeys, setLoadingKeys] = useState<Set<Key>>(() => new Set());
+  const [toggled, setToggled] = useState<Set<Key>>(() => new Set());
+  const childrenOf = useCallback((row: T) => loaded.get(getRowKey(row)) ?? getChildren?.(row), [loaded, getChildren, getRowKey]);
+  const filtering = Object.values(filters).some(isFilterActive) || !!searchText.trim();
+
+  const leavesOf = useCallback(function leaves(row: T): T[] {
+    const kids = childrenOf(row);
+    return kids?.length ? kids.flatMap(leaves) : [row];
+  }, [childrenOf]);
+
+  /** A parent shows its leaves' total, so that total is what sorting and copying use. */
+  const rollupOf = useCallback((column: Column<T>, row: T) => (column.aggregate && childrenOf(row)?.length ? aggregateColumn(column, leavesOf(row)) : undefined), [childrenOf, leavesOf]);
+
+  const tree = useMemo(() => {
+    if (!isTree) return null;
+    const sortable = columns.map((c) => (c.aggregate ? { ...c, sortValue: (row: T) => (rollupOf(c, row) as number | undefined) ?? (c.sortValue ? c.sortValue(row) : (readValue(c, row) as number | undefined)) } : c));
+    return buildTree(rows, {
+      childrenOf,
+      getKey: getRowKey,
+      keep: (row) => filterRows([row], columns, filters, searchText, t.lang).length > 0,
+      order: (level) => sortByMany(level, sorts, sortable, t.lang),
+    });
+  }, [isTree, rows, childrenOf, getRowKey, columns, filters, searchText, sorts, t.lang, rollupOf]);
+
   const processed = useMemo(() => {
     if (server || dataSource) return rows;
+    if (tree) return tree.map((node) => node.row);
     return sortByMany(filterRows(rows, columns, filters, searchText, t.lang), sorts, columns, t.lang);
-  }, [rows, columns, filters, searchText, sorts, server, dataSource, t.lang]);
+  }, [rows, columns, filters, searchText, sorts, server, dataSource, t.lang, tree]);
 
-  const size = ownPageSize ?? (server ? rows.length : 0);
+  /** The rows totals and exports count: in a tree, the leaves. */
+  const countable = useMemo(() => (tree ? tree.flatMap(leafRows) : processed), [tree, processed]);
+
+  const treeOpen = useCallback((key: Key, level: number) => {
+    const byDefault = defaultExpanded === true || (typeof defaultExpanded === "number" && level < defaultExpanded);
+    return toggled.has(key) ? !byDefault : byDefault;
+  }, [defaultExpanded, toggled]);
+
+  const canOpen = useCallback((row: T, node?: TreeNode<T>) => (node?.children.length ? true : hasChildren?.(row) ?? false), [hasChildren]);
+
+  const flip = useCallback((key: Key) => setToggled((current) => {
+    const next = new Set(current);
+    if (!next.delete(key)) next.add(key);
+    return next;
+  }), []);
+
+  const asked = useRef(new Set<Key>());
+
+  const fetchChildren = useCallback(async (row: T, key: Key, level: number) => {
+    if (!loadChildren || childrenOf(row)?.length || asked.current.has(key)) return;
+    asked.current.add(key);
+    setLoadingKeys((current) => new Set(current).add(key));
+    try {
+      const children = await loadChildren(row);
+      setLoaded((current) => new Map(current).set(key, children));
+    } catch (error) {
+      // A failed row closes again, and opening it tries once more.
+      console.error(error);
+      asked.current.delete(key);
+      setToggled((current) => {
+        const byDefault = defaultExpanded === true || (typeof defaultExpanded === "number" && level < defaultExpanded);
+        const next = new Set(current);
+        if (byDefault) next.add(key);
+        else next.delete(key);
+        return next;
+      });
+    } finally {
+      setLoadingKeys((current) => { const next = new Set(current); next.delete(key); return next; });
+    }
+  }, [loadChildren, childrenOf, defaultExpanded]);
+
+  function toggleTree(row: T, key: Key, level: number) {
+    const opening = !treeOpen(key, level);
+    flip(key);
+    if (opening) void fetchChildren(row, key, level);
+  }
+
+  // Without a pageSize the first page is the best guide: a short last page must not change it.
+  const seenSize = useRef(0);
+  seenSize.current = Math.max(seenSize.current, server ? rows.length : 0);
+  const size = ownPageSize ?? seenSize.current;
   const paged = size > 0 && !virtual;
   const totalRows = dataSource ? source.total : server ? server.total : processed.length;
   const pageCount = paged ? Math.max(1, Math.ceil(totalRows / size)) : 1;
@@ -234,6 +324,16 @@ export function DataTable<T>(props: DataTableProps<T>) {
       out.push({ kind: "row", row, key });
       if (renderDetail && expanded.has(key)) out.push({ kind: "detail", row, key });
     };
+    if (tree) {
+      const roots = new Set(onPage);
+      const pushNode = (node: TreeNode<T>) => {
+        out.push({ kind: "row", row: node.row, key: node.key, node });
+        if (renderDetail && expanded.has(node.key)) out.push({ kind: "detail", row: node.row, key: node.key });
+        if (filtering || treeOpen(node.key, node.level)) node.children.forEach(pushNode);
+      };
+      tree.filter((node) => roots.has(node.row)).forEach(pushNode);
+      return out;
+    }
     if (grouped.length === 0) { onPage.forEach(pushRow); return out; }
     const walk = (nodes: GroupNode<T>[]) => {
       for (const node of nodes) {
@@ -246,7 +346,15 @@ export function DataTable<T>(props: DataTableProps<T>) {
     };
     walk(groupRows(onPage, grouped));
     return out;
-  }, [dataSource, onPage, grouped, closedGroups, expanded, renderDetail, getRowKey]);
+  }, [dataSource, onPage, grouped, closedGroups, expanded, renderDetail, getRowKey, tree, filtering, treeOpen]);
+
+  // Rows that start open still need their children fetched.
+  useEffect(() => {
+    if (!loadChildren) return;
+    for (const item of display) {
+      if (item.kind === "row" && item.node && hasChildren?.(item.row) && treeOpen(item.key, item.node.level)) void fetchChildren(item.row, item.key, item.node.level);
+    }
+  }, [display, loadChildren, hasChildren, treeOpen, fetchChildren]);
 
   const count = dataSource ? source.total : display.length;
   const at = useCallback((index: number): Display<T> => {
@@ -319,6 +427,19 @@ export function DataTable<T>(props: DataTableProps<T>) {
     observer.observe(tableRef.current);
     return () => observer.disconnect();
   }, [hasPins, visible, widths]);
+
+  // Plain tables size columns from content, so sorting or paging would shift them.
+  // Once drawn the widths hold, as shares so the table still follows its container.
+  const layoutKey = `${visible.map((c) => c.key).join("|")}:${compact}:${!!renderDetail}:${!!onSelectionChange}`;
+  const [locked, setLocked] = useState<{ key: string; shares: number[] } | null>(null);
+  const lockedShares = locked?.key === layoutKey ? locked.shares : null;
+  useLayoutEffect(() => {
+    if (fixed || lockedShares || count === 0) return;
+    const heads = Array.from(tableRef.current?.querySelectorAll<HTMLElement>("thead th") ?? []);
+    const widthsNow = heads.map((th) => th.offsetWidth);
+    const total = widthsNow.reduce((sum, w) => sum + w, 0);
+    if (total > 0) setLocked({ key: layoutKey, shares: widthsNow.map((w) => (w / total) * 100) });
+  }, [fixed, lockedShares, count, layoutKey]);
 
   const selectable = !!onSelectionChange;
   const utilityWidth = (selectable ? UTILITY.select : 0) + (renderDetail ? UTILITY.detail : 0);
@@ -467,6 +588,9 @@ export function DataTable<T>(props: DataTableProps<T>) {
   const [anchor, setAnchor] = useState<Cell | null>(null);
   const [editing, setEditing] = useState<(Cell & { text: string; error?: string }) | null>(null);
   const dragging = useRef(false);
+  const [fillTarget, setFillTarget] = useState<Cell | null>(null);
+  const filling = useRef(false);
+  const finishFill = useRef<() => void>(() => undefined);
   const undoStack = useRef<CellChange<T>[][]>([]);
   const redoStack = useRef<CellChange<T>[][]>([]);
 
@@ -477,7 +601,10 @@ export function DataTable<T>(props: DataTableProps<T>) {
   const multi = !!bounds && (bounds.top !== bounds.bottom || bounds.left !== bounds.right);
 
   useEffect(() => {
-    const up = () => { dragging.current = false; };
+    const up = () => {
+      dragging.current = false;
+      if (filling.current) { filling.current = false; finishFill.current(); }
+    };
     window.addEventListener("pointerup", up);
     return () => window.removeEventListener("pointerup", up);
   }, []);
@@ -513,13 +640,36 @@ export function DataTable<T>(props: DataTableProps<T>) {
   function cellGrid(withHeaders: boolean) {
     if (!bounds) return [] as string[][];
     const cols = visible.slice(bounds.left, bounds.right + 1);
-    const grid = rowsInRange().map((row) => cols.map((c) => textOf(c, row)));
+    const text = (c: Column<T>, row: T) => {
+      const rollup = rollupOf(c, row);
+      if (rollup === undefined) return textOf(c, row);
+      return c.format ? c.format(rollup, row) : String(rollup ?? "");
+    };
+    const grid = rowsInRange().map((row) => cols.map((c) => text(c, row)));
     return withHeaders ? [cols.map((c) => plainHeader(c)), ...grid] : grid;
   }
 
   function copy(withHeaders = false) {
     const text = toTsv(cellGrid(withHeaders));
     if (text) void navigator.clipboard?.writeText(text);
+  }
+
+  const [chart, setChart] = useState<ChartPickerProps | null>(null);
+
+  /** Numeric columns in the range become series; the first text column names the rows. */
+  function chartFromRange() {
+    if (!bounds) return null;
+    const cols = visible.slice(bounds.left, bounds.right + 1);
+    const picked = rowsInRange();
+    const numeric = cols.filter((c) => picked.some((row) => typeof readValue(c, row) === "number"));
+    if (numeric.length === 0 || picked.length === 0) return null;
+    const nameColumn = cols.find((c) => !numeric.includes(c)) ?? visible.slice(0, bounds.left).reverse().find((c) => !numeric.includes(c));
+    return {
+      columns: numeric.map(plainHeader),
+      categories: picked.map((row, i) => (nameColumn ? textOf(nameColumn, row) : String(i + 1))),
+      rows: picked.map((row) => numeric.map((c) => Number(readValue(c, row)) || 0)),
+      label: typeof title === "string" ? title : g.chartTitle,
+    };
   }
 
   function reveal(index: number) {
@@ -560,7 +710,9 @@ export function DataTable<T>(props: DataTableProps<T>) {
     const item = at(cell.r) as { row: T };
     const column = visible[cell.c];
     const value = readValue(column, item.row);
-    setEditing({ ...cell, text: seed ?? (isBlank(value) ? "" : column.options ? String(value) : textOf(column, item.row)) });
+    // Editors work on the raw value: `format` is for reading, and would be saved back as data.
+    const raw = isBlank(value) ? "" : value instanceof Date ? value.toISOString().slice(0, 10) : typeof value === "number" ? value.toLocaleString(t.lang, { useGrouping: false, maximumFractionDigits: 20 }) : String(value);
+    setEditing({ ...cell, text: seed ?? raw });
     return true;
   }
 
@@ -605,6 +757,92 @@ export function DataTable<T>(props: DataTableProps<T>) {
     if (!(value === previous || (isBlank(value) && isBlank(previous)))) apply([{ row: item.row, key: column.key, value, previous }]);
     if (move) moveTo(move, false);
     tableRef.current?.focus({ preventScroll: true });
+  }
+
+  /** Rows of the range extended by the fill handle, in the direction it was dragged. */
+  const fillArea = bounds && fillTarget ? (() => {
+    const down = fillTarget.r - bounds.bottom;
+    const up = bounds.top - fillTarget.r;
+    const right = fillTarget.c - bounds.right;
+    const left = bounds.left - fillTarget.c;
+    if (Math.max(down, up) >= Math.max(right, left)) {
+      if (down > 0) return { axis: "rows" as const, from: bounds.bottom + 1, to: fillTarget.r, backwards: false };
+      if (up > 0) return { axis: "rows" as const, from: fillTarget.r, to: bounds.top - 1, backwards: true };
+    } else {
+      if (right > 0) return { axis: "cols" as const, from: bounds.right + 1, to: fillTarget.c, backwards: false };
+      if (left > 0) return { axis: "cols" as const, from: fillTarget.c, to: bounds.left - 1, backwards: true };
+    }
+    return null;
+  })() : null;
+
+  /** A fill crossing columns must not put text in a number column or a name in a date column. */
+  function accepts(column: Column<T>, value: unknown) {
+    if (isBlank(value)) return true;
+    if (column.options) return column.options.some((o) => o.value === value);
+    if (column.type === "number") return typeof value === "number";
+    if (column.type === "date") return typeof value === "string" && /^\d{4}-\d{2}-\d{2}/.test(value);
+    if (column.type === "boolean") return typeof value === "boolean";
+    return typeof value === "string" || typeof value === "number";
+  }
+
+  function fillChanges(area: NonNullable<typeof fillArea>) {
+    if (!bounds) return [];
+    const changes: CellChange<T>[] = [];
+    const write = (r: number, c: number, value: unknown) => {
+      const item = at(r);
+      if (item?.kind !== "row" || !canEdit({ r, c })) return;
+      const column = visible[c];
+      const previous = readValue(column, item.row);
+      if (value !== previous && accepts(column, value) && !column.validate?.(value, item.row)) changes.push({ row: item.row, key: column.key, value, previous });
+    };
+    const rowsBetween = (from: number, to: number) => {
+      const list: number[] = [];
+      for (let r = from; r <= to; r++) if (at(r)?.kind === "row") list.push(r);
+      return list;
+    };
+    const sourceRows = rowsBetween(bounds.top, bounds.bottom);
+    if (area.axis === "rows") {
+      const targets = rowsBetween(area.from, area.to);
+      const ordered = area.backwards ? [...targets].reverse() : targets;
+      for (let c = bounds.left; c <= bounds.right; c++) {
+        const seed = sourceRows.map((r) => readValue(visible[c], (at(r) as { row: T }).row));
+        fillSeries(seed, ordered.length, area.backwards).forEach((value, i) => write(ordered[i], c, value));
+      }
+    } else {
+      const count = area.to - area.from + 1;
+      for (const r of sourceRows) {
+        const row = (at(r) as { row: T }).row;
+        const seed = visible.slice(bounds.left, bounds.right + 1).map((c) => readValue(c, row));
+        fillSeries(seed, count, area.backwards).forEach((value, i) => write(r, area.backwards ? area.to - i : area.from + i, value));
+      }
+    }
+    return changes;
+  }
+
+  finishFill.current = () => {
+    if (fillArea && bounds) {
+      apply(fillChanges(fillArea));
+      setAnchor({ r: fillArea.axis === "rows" ? Math.min(bounds.top, fillArea.from) : bounds.top, c: fillArea.axis === "cols" ? Math.min(bounds.left, fillArea.from) : bounds.left });
+      setActive({ r: fillArea.axis === "rows" ? Math.max(bounds.bottom, fillArea.to) : bounds.bottom, c: fillArea.axis === "cols" ? Math.max(bounds.right, fillArea.to) : bounds.right });
+    }
+    setFillTarget(null);
+  };
+
+  function fillFromEdge(direction: "down" | "right") {
+    if (!bounds) return;
+    const changes: CellChange<T>[] = [];
+    for (let r = bounds.top; r <= bounds.bottom; r++) {
+      for (let c = bounds.left; c <= bounds.right; c++) {
+        const item = at(r);
+        const origin = at(direction === "down" ? bounds.top : r);
+        if (item?.kind !== "row" || origin?.kind !== "row" || (direction === "down" ? r === bounds.top : c === bounds.left) || !canEdit({ r, c })) continue;
+        const column = visible[c];
+        const value = readValue(direction === "down" ? column : visible[bounds.left], origin.row);
+        const previous = readValue(column, item.row);
+        if (value !== previous && accepts(column, value) && !column.validate?.(value, item.row)) changes.push({ row: item.row, key: column.key, value, previous });
+      }
+    }
+    apply(changes);
   }
 
   function clearRange() {
@@ -658,6 +896,8 @@ export function DataTable<T>(props: DataTableProps<T>) {
     if (mod && key === "c") { e.preventDefault(); copy(); return; }
     if (mod && key === "z") { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
     if (mod && key === "y") { e.preventDefault(); redo(); return; }
+    if (mod && key === "d" && hasEditable) { e.preventDefault(); fillFromEdge("down"); return; }
+    if (mod && key === "r" && hasEditable) { e.preventDefault(); fillFromEdge("right"); return; }
     if (mod && key === "a") { e.preventDefault(); setAnchor({ r: 0, c: 0 }); setActive({ r: count - 1, c: visible.length - 1 }); return; }
     if (!active) {
       if (/^(Arrow|Home|End|Page)/.test(e.key)) { e.preventDefault(); moveTo({ r: 0, c: 0 }, false); }
@@ -680,6 +920,14 @@ export function DataTable<T>(props: DataTableProps<T>) {
       e.preventDefault();
       toggleGroup(item.node.key);
       return;
+    }
+    if (item?.kind === "row" && item.node && active.c === 0 && (e.key === "ArrowRight" || e.key === "ArrowLeft") && canOpen(item.row, item.node)) {
+      const open = filtering || treeOpen(item.key, item.node.level);
+      if (open === (e.key === "ArrowLeft")) {
+        e.preventDefault();
+        void toggleTree(item.row, item.key, item.node.level);
+        return;
+      }
     }
     if (moves[e.key]) {
       e.preventDefault();
@@ -711,7 +959,22 @@ export function DataTable<T>(props: DataTableProps<T>) {
     return td && tr ? { r: Number(tr.dataset.r), c: Number(td.dataset.c) } : null;
   }
 
+  function edgeScroll(e: ReactPointerEvent) {
+    const el = scroller.current;
+    if (!el || !(dragging.current || filling.current)) return;
+    const box = el.getBoundingClientRect();
+    if (e.clientY > box.bottom - 28) el.scrollTop += lineHeight;
+    else if (e.clientY < box.top + HEADER_HEIGHT + 20) el.scrollTop -= lineHeight;
+  }
+
   function onCellPointerDown(e: ReactPointerEvent) {
+    if ((e.target as HTMLElement).closest(".bt-fill-handle")) {
+      e.preventDefault();
+      // Touch pointers stay bound to where they started; release so cells report the drag.
+      (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
+      filling.current = true;
+      return;
+    }
     if (!interactive || e.button !== 0 || (e.target as HTMLElement).closest("input, select, textarea, button, a, label")) return;
     const cell = cellFrom(e);
     if (!cell) return;
@@ -723,9 +986,11 @@ export function DataTable<T>(props: DataTableProps<T>) {
   }
 
   function onCellPointerOver(e: ReactPointerEvent) {
-    if (!dragging.current) return;
+    edgeScroll(e);
     const cell = cellFrom(e);
-    if (cell) setActive(cell);
+    if (!cell) return;
+    if (filling.current) setFillTarget(cell);
+    else if (dragging.current) setActive(cell);
   }
 
   function onCellContextMenu(e: MouseEvent) {
@@ -753,7 +1018,13 @@ export function DataTable<T>(props: DataTableProps<T>) {
     const data: SheetCell[][] = [];
     const outline: number[] = [];
     const boldRows = new Set<number>();
-    if (grouped.length && !selectedOnly) {
+    if (tree && !selectedOnly) {
+      for (const node of flattenTree(tree)) {
+        outline.push(node.level);
+        if (node.children.length) boldRows.add(data.length);
+        data.push(cols.map((c) => (node.children.length && c.aggregate ? (aggregateColumn(c, leafRows(node)) as SheetCell) : cell(c, node.row))));
+      }
+    } else if (grouped.length && !selectedOnly) {
       const walk = (nodes: GroupNode<T>[]) => {
         for (const node of nodes) {
           boldRows.add(data.length);
@@ -767,11 +1038,12 @@ export function DataTable<T>(props: DataTableProps<T>) {
     } else {
       for (const row of chosen) data.push(cols.map((c) => cell(c, row)));
     }
-    const summary = cols.some((c) => c.aggregate) ? cols.map((c, i) => (c.aggregate ? (aggregateColumn(c, chosen) as SheetCell) : i === 0 ? g.total : null)) : undefined;
+    const totalsOver = tree && !selectedOnly ? countable : chosen;
+    const summary = cols.some((c) => c.aggregate) ? cols.map((c, i) => (c.aggregate ? (aggregateColumn(c, totalsOver) as SheetCell) : i === 0 ? g.total : null)) : undefined;
     const name = exportFileName;
     if (kind === "xlsx") {
       const sheetName = typeof title === "string" ? title : undefined;
-      download(buildXlsx({ name: sheetName, columns: sheetColumns, rows: data, outline: grouped.length ? outline : undefined, boldRows, totals: summary }) as BlobPart, `${name}.xlsx`, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      download(buildXlsx({ name: sheetName, columns: sheetColumns, rows: data, outline: outline.length ? outline : undefined, boldRows, totals: summary }) as BlobPart, `${name}.xlsx`, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     } else {
       download(buildCsv(sheetColumns, data), `${name}.csv`, "text/csv;charset=utf-8");
     }
@@ -782,7 +1054,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
   const hideable = columns.filter((c) => c.hideable !== false && !groupBy.includes(c.key));
   const hasFooter = visible.some((c) => c.footer !== undefined) || (totals && visible.some((c) => c.aggregate));
   const checked = selectedKeys ?? [];
-  const pageKeys = useMemo(() => (dataSource ? [] : onPage.map(getRowKey)), [dataSource, onPage, getRowKey]);
+  const pageKeys = useMemo(() => (dataSource ? [] : tree ? flattenTree(tree).map((node) => node.key) : onPage.map(getRowKey)), [dataSource, onPage, getRowKey, tree]);
   const pageChecked = pageKeys.filter((k) => checked.includes(k)).length;
   const span = visible.length + (renderDetail ? 1 : 0) + (selectable ? 1 : 0);
   const activeFilterCount = Object.values(filters).filter(isFilterActive).length;
@@ -937,8 +1209,11 @@ export function DataTable<T>(props: DataTableProps<T>) {
         </tr>
       );
     }
-    const { row, key } = item;
+    const { row, key, node } = item;
     const open = expanded.has(key);
+    const parent = !!node && canOpen(row, node);
+    const treeIsOpen = !!node && parent && (filtering || treeOpen(key, node.level));
+    const leaves = node && node.children.length ? leafRows(node) : null;
     const isSelected = selectedKey !== undefined && selectedKey === key;
     const isChecked = checked.includes(key);
     return (
@@ -950,6 +1225,9 @@ export function DataTable<T>(props: DataTableProps<T>) {
         data-selected={flag(isSelected || isChecked)}
         aria-current={isSelected ? "true" : undefined}
         aria-rowindex={rowIndex}
+        aria-level={interactive && node ? node.level + 1 : undefined}
+        aria-expanded={interactive && parent ? treeIsOpen : undefined}
+        data-tree-parent={flag(leaves)}
         className={rowClassName?.(row)}
         tabIndex={onRowClick && !interactive ? 0 : undefined}
         onClick={onRowClick ? (e) => { if (!multi && !(e.target as HTMLElement).closest("input, select, button, a, label")) onRowClick(row); } : undefined}
@@ -971,7 +1249,20 @@ export function DataTable<T>(props: DataTableProps<T>) {
           const isEditing = editing?.r === r && editing.c === i;
           const inRange = !!bounds && r >= bounds.top && r <= bounds.bottom && i >= bounds.left && i <= bounds.right;
           const isActive = active?.r === r && active.c === i;
-          const value = c.cell ? c.cell(row) : (c.format ? textOf(c, row) : (readValue(c, row) as ReactNode));
+          const rollup = leaves && c.aggregate ? aggregateColumn(c, leaves) : undefined;
+          const shown = rollup !== undefined ? (c.format ? c.format(rollup, row) : typeof rollup === "number" ? rollup.toLocaleString(t.lang, { maximumFractionDigits: 2 }) : (rollup as ReactNode)) : c.cell ? c.cell(row) : (c.format ? textOf(c, row) : (readValue(c, row) as ReactNode));
+          const value = node && i === 0 ? (
+            <span className="bt-tree-label" style={{ paddingLeft: node.level * 18 }}>
+              {parent ? (
+                <button type="button" className="bt-detail-toggle" aria-expanded={treeIsOpen} aria-label={t.showDetail} onClick={(e) => { e.stopPropagation(); void toggleTree(row, key, node.level); }}>
+                  {loadingKeys.has(key) ? <span className="bt-btn-spin" aria-hidden="true" /> : <ChevronRight size={14} />}
+                </button>
+              ) : <span className="bt-tree-gap" />}
+              <span className="bt-tree-text">{shown}</span>
+            </span>
+          ) : shown;
+          const handleHere = hasEditable && !!bounds && !editing && !fillTarget && r === bounds.bottom && i === bounds.right;
+          const inFill = !!fillArea && !!bounds && (fillArea.axis === "rows" ? r >= fillArea.from && r <= fillArea.to && i >= bounds.left && i <= bounds.right : i >= fillArea.from && i <= fillArea.to && r >= bounds.top && r <= bounds.bottom);
           return (
             <td
               key={c.key}
@@ -984,10 +1275,12 @@ export function DataTable<T>(props: DataTableProps<T>) {
               data-range={flag(inRange && multi)}
               data-active-cell={flag(isActive)}
               data-editable={flag(hasEditable && canEdit({ r, c: i }))}
+              data-fill={flag(inFill)}
               onDoubleClick={() => startEdit({ r, c: i })}
               {...pinAttrs(c)}
             >
               {isEditing ? renderEditor(c) : value}
+              {handleHere ? <span className="bt-fill-handle" aria-hidden="true" title={g.fillHint} /> : null}
             </td>
           );
         })}
@@ -1031,14 +1324,15 @@ export function DataTable<T>(props: DataTableProps<T>) {
       <table
         ref={tableRef}
         className={cx("bt-table", loading && count > 0 && "bt-table-loading")}
-        role={interactive ? "grid" : undefined}
+        role={interactive ? (isTree ? "treegrid" : "grid") : undefined}
         aria-busy={loading || source.loading || undefined}
-        aria-rowcount={interactive || virtual ? totalRows + 1 : undefined}
+        aria-rowcount={interactive || virtual ? (tree ? count : totalRows) + 1 : undefined}
         aria-multiselectable={cellSelection || undefined}
         aria-activedescendant={active ? `${uid}-${active.r}-${active.c}` : undefined}
         aria-label={typeof title === "string" ? title : undefined}
         tabIndex={interactive ? 0 : undefined}
         data-fixed={flag(fixed)}
+        data-locked={flag(!fixed && lockedShares)}
         data-virtual={flag(virtual)}
         data-interactive={flag(interactive)}
         style={{ "--bt-row-h": `${lineHeight}px`, minWidth: fixed ? visible.reduce((sum, c) => sum + widthOf(c), utilityWidth) : undefined } as CSSProperties}
@@ -1047,6 +1341,9 @@ export function DataTable<T>(props: DataTableProps<T>) {
         onPointerDown={onCellPointerDown}
         onPointerOver={onCellPointerOver}
       >
+        {!fixed && lockedShares ? (
+          <colgroup>{lockedShares.map((share, i) => <col key={i} style={{ width: `${share}%` }} />)}</colgroup>
+        ) : null}
         {fixed ? (
           <colgroup>
             {selectable ? <col style={{ width: UTILITY.select }} /> : null}
@@ -1134,7 +1431,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
               {selectable ? <td /> : null}
               {renderDetail ? <td /> : null}
               {visible.map((c, i) => {
-                const auto = totals && c.aggregate ? aggregateColumn(c, processed) : undefined;
+                const auto = totals && c.aggregate ? aggregateColumn(c, countable) : undefined;
                 const text = c.footer ?? (auto === undefined || auto === null ? (totals && i === 0 ? g.total : null) : c.format ? c.format(auto, processed[0]) : typeof auto === "number" ? auto.toLocaleString(t.lang, { maximumFractionDigits: 2 }) : String(auto));
                 return <td key={c.key} data-align={c.align} {...pinAttrs(c)}>{text}</td>;
               })}
@@ -1158,7 +1455,13 @@ export function DataTable<T>(props: DataTableProps<T>) {
           ) : null}
           {searchable ? <SearchInput value={searchText} onChange={(e) => changeSearch(e.target.value)} className="bt-band-search" /> : null}
           {checked.length > 0 && bulkActions ? (
-            <span className="bt-band-bulk">{t.selected(checked.length)}{bulkActions}</span>
+            <span className="bt-band-bulk">
+              {t.selected(checked.length)}
+              {paged && !server && pageKeys.length > 0 && pageChecked === pageKeys.length && checked.length < processed.length ? (
+                <Button size="xs" variant="ghost" onClick={() => onSelectionChange?.(processed.map(getRowKey))}>{g.selectAllRows(processed.length)}</Button>
+              ) : null}
+              {bulkActions}
+            </span>
           ) : chips}
           {grouped.map((c) => (
             <span key={c.key} className="bt-tag">
@@ -1223,6 +1526,9 @@ export function DataTable<T>(props: DataTableProps<T>) {
               <ContextMenu.Popup className="bt-popup bt-menu">
                 {cellSelection ? <ContextMenu.Item className="bt-menu-item" onClick={() => copy()}>{g.copy}</ContextMenu.Item> : null}
                 {cellSelection ? <ContextMenu.Item className="bt-menu-item" onClick={() => copy(true)}>{g.copyWithHeaders}</ContextMenu.Item> : null}
+                {cellSelection ? (
+                  <ContextMenu.Item className="bt-menu-item" onClick={() => { const next = chartFromRange(); if (next) setChart(next); }} disabled={!chartFromRange()} title={chartFromRange() ? undefined : g.chartNeedsNumbers}>{g.makeChart}</ContextMenu.Item>
+                ) : null}
                 {exportable ? <ContextMenu.Separator className="bt-menu-sep" /> : null}
                 {exportable ? <ContextMenu.Item className="bt-menu-item" onClick={() => void exportAs("xlsx")}>{g.exportExcel}</ContextMenu.Item> : null}
                 {menuTarget && contextMenu ? contextMenu(menuTarget).map((item, i) => (
@@ -1233,12 +1539,17 @@ export function DataTable<T>(props: DataTableProps<T>) {
           </ContextMenu.Portal>
         </ContextMenu.Root>
       ) : scrollArea}
+      {chart ? (
+        <Modal open onClose={() => setChart(null)} title={g.chartTitle} size="lg">
+          <SelectionChart {...chart} />
+        </Modal>
+      ) : null}
       {paged || footerNote || virtual || stats ? (
         <div className="bt-table-foot">
           <span>{statusBar ?? footerNote ?? (paged || virtual ? t.records(from, to, totalRows) : null)}</span>
           <span className="bt-table-foot-end">
             {pageSizeOptions && paged ? (
-              <Select size="sm" aria-label={g.rowsPerPage} value={String(size)} onChange={(next) => { setOwnPageSize(Number(next)); setOwnPage(1); }} options={pageSizeOptions.map((n) => ({ value: String(n), label: g.perPage(n) }))} />
+              <Select size="sm" aria-label={g.rowsPerPage} value={String(size)} onChange={(next) => { setOwnPageSize(Number(next)); setOwnPage(1); server?.onPageSizeChange?.(Number(next)); }} options={pageSizeOptions.map((n) => ({ value: String(n), label: g.perPage(n) }))} />
             ) : null}
             {paged && pageCount > 1 ? <Pagination page={page} pageCount={pageCount} onChange={goTo} /> : null}
           </span>

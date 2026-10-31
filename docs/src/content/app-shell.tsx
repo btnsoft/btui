@@ -263,13 +263,13 @@ export default definePage({
     {
       id: "narrow",
       title: { tr: "Dar ekran", en: "Narrow screens" },
-      body: { tr: "800 piksel ve altında menü sayfadan çıkar, çekmece olarak açılır. Menü düğmesi bu genişlikte `collapsed` değerine dokunmaz, yalnız çekmeceyi açıp kapatır. Bir menü öğesine ya da arkadaki perdeye basmak çekmeceyi kapatır.", en: "At 800 pixels and below the menu leaves the page and opens as a drawer. At this width the menu button leaves `collapsed` alone and only opens or closes the drawer. Pressing a menu item or the scrim behind it closes the drawer." },
+      body: { tr: "800 piksel ve altında menü sayfadan çıkar, çekmece olarak açılır. Menü düğmesi bu genişlikte `collapsed` değerine dokunmaz, yalnız çekmeceyi açıp kapatır ve durumu `aria-expanded` ile bildirir. Çekmece açılınca odak kenar menüsündeki ilk bağlantı ya da düğmeye geçer, ana alan `inert` olur ve arkada kalan içerik klavyeye kapanır. `Esc`, bir menü öğesi ya da arkadaki perde çekmeceyi kapatır; odak açan düğmeye döner.", en: "At 800 pixels and below the menu leaves the page and opens as a drawer. At this width the menu button leaves `collapsed` alone, only opens or closes the drawer and reports it through `aria-expanded`. When the drawer opens, focus moves to the first link or button in the sidebar, the main area turns `inert` and the content behind is closed to the keyboard. `Esc`, a menu item or the scrim behind it closes the drawer, and focus returns to the button that opened it." },
     },
   ],
   a11y: [
     { tr: "`aside`, `header` ve `main` öğeleriyle sayfa işaret noktaları hazır gelir; ekran okuyucu kullananlar bölgeler arasında atlayabilir.", en: "`aside`, `header` and `main` provide the page landmarks, so screen reader users can jump between regions." },
     { tr: "Menü düğmesinin adı yerelleştirme dosyasındaki `menu` metninden gelir; perde düğmesi de `close` metniyle adlandırılır.", en: "The menu button takes its name from the locale's `menu` string, and the scrim button uses `close`." },
-    { tr: "Dar ekrandaki çekmece odağı içine almaz ve `Escape` ile kapanmaz; kapatmak için bir menü öğesi ya da perde kullanılır.", en: "The drawer on narrow screens does not trap focus and does not close on `Escape`; a menu item or the scrim closes it." },
+    { tr: "Dar ekranda çekmece açılınca odak içeri girer, ana alan `inert` olur; `Esc` çekmeceyi kapatır ve odak menü düğmesine döner. Menü düğmesi `aria-expanded` taşır.", en: "On narrow screens, opening the drawer moves focus inside and turns the main area `inert`; `Esc` closes it and focus returns to the menu button. The menu button carries `aria-expanded`." },
     { tr: "`storageKey` depolama engelliyse sessizce devre dışı kalır; tercih yalnız o sayfa için geçerli olur.", en: "If storage is blocked, `storageKey` falls back silently and the choice lasts for that page only." },
   ],
   keyboard: [
@@ -277,6 +277,7 @@ export default definePage({
     ["Shift + Tab", { tr: "Odağı geri alır", en: "Moves focus back" }],
     ["Enter", { tr: "Odaktaki bağlantıya gider ya da menü düğmesini çalıştırır", en: "Follows the focused link or presses the menu button" }],
     ["Space", { tr: "Odaktaki menü düğmesini çalıştırır", en: "Presses the focused menu button" }],
+    ["Esc", { tr: "Dar ekranda çekmeceyi kapatır, odağı menü düğmesine verir", en: "On narrow screens, closes the drawer and returns focus to the menu button" }],
   ],
   api: [
     {

@@ -26,7 +26,7 @@ const de: BtuiLocale = { ...en, lang: "de", search: "Suchen…", cancel: "Abbrec
 <BtuiProvider locale={de}>…</BtuiProvider>`}</Code>
       <H2 id="search">{t({ tr: "Türkçe arama", en: "Turkish search" })}</H2>
       <P>{{ tr: "Standart `toLowerCase` İ ve I harflerini bozar. btui dile duyarlı karşılaştırır: listeyi açıp \"izmir\" yazın.", en: "Plain `toLowerCase` breaks the letters İ and I. btui compares by locale: open the list and type \"izmir\"." }}</P>
-      <Stage><div className="d-stack"><Select value={city} onChange={setCity} options={CITIES} /></div></Stage>
+      <Stage><div className="d-stack"><Select aria-label={t({ tr: "İl", en: "City" })} value={city} onChange={setCity} options={CITIES} /></div></Stage>
       <H2 id="sorting">{t({ tr: "Türkçe sıralama", en: "Turkish sorting" })}</H2>
       <P>{{ tr: "Çınar, C'den sonra; Şule, S'den sonra gelir. Ham karakter koduyla sıralasaydınız ikisi de listenin sonuna düşerdi.", en: "Çınar follows C and Şule follows S. Sorting by raw character code would push both to the end of the list." }}</P>
       <Stage block><DataTable columns={columns} rows={NAMES} getRowKey={(r) => r.name} defaultSort={{ key: "name", direction: "asc" }} /></Stage>

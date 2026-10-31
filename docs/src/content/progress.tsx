@@ -68,6 +68,15 @@ function Indeterminate() {
   );
 }
 
+function NoLabel() {
+  const t = useText();
+  return (
+    <div className="d-stack">
+      <Progress value={64} showValue={false} aria-label={t({ tr: "Dosya yükleme", en: "File upload" })} />
+    </div>
+  );
+}
+
 export default definePage({
   summary: { tr: "Bir işin ne kadarının bittiğini ya da bir sınırın ne kadarının kullanıldığını yatay bir çubukla gösterir.", en: "Shows how much of a job is done, or how much of a limit is used, with a horizontal bar." },
   imports: 'import { Progress } from "btui";',
@@ -131,15 +140,25 @@ export default definePage({
     {
       id: "indeterminate",
       title: { tr: "Belirsiz süre", en: "Unknown duration" },
-      body: { tr: "İşin ne kadar süreceği bilinmiyorsa `value={null}` verin. Çubuk hareket eder, yüzde yazılmaz ve yardımcı teknolojiye değer bildirilmez. Sonucu dış bir sistemden beklediğiniz durumlarda işe yarar.", en: "When the duration is unknown, pass `value={null}`. The bar animates, no percentage appears and no value is reported to assistive technology. This suits waiting on an outside system." },
+      body: { tr: "İşin ne kadar süreceği bilinmiyorsa `value={null}` verin. Çubuk soldan sağa kayar, yüzde yazılmaz ve yardımcı teknoloji dil dosyasındaki `loading` metnini okur. Sonucu dış bir sistemden beklediğiniz durumlarda işe yarar.", en: "When the duration is unknown, pass `value={null}`. The bar slides from left to right, no percentage appears and assistive technology reads the `loading` text from the locale. This suits waiting on an outside system." },
       example: {
         Demo: Indeterminate,
         code: `<Progress value={null} label="Waiting for the bank" />`,
       },
     },
+    {
+      id: "aria-label",
+      title: { tr: "Görünür etiket olmadan", en: "Without a visible label" },
+      body: { tr: "Çubuk bir kart ya da satır içinde tek başına duruyorsa ve görünür metin yoksa `aria-label` ile adlandırın. Adsız bir çubuk ekran okuyucuda yalnız bir yüzde olarak duyulur.", en: "When a bar stands alone in a card or a row with no visible text, name it with `aria-label`. An unnamed bar reaches a screen reader as a bare percentage." },
+      example: {
+        Demo: NoLabel,
+        code: `<Progress value={64} showValue={false} aria-label="File upload" />`,
+      },
+    },
   ],
   a11y: [
     { tr: "`role=\"progressbar\"` ile `aria-valuenow`, `aria-valuemin` ve `aria-valuemax` otomatik gelir.", en: "`role=\"progressbar\"` comes with `aria-valuenow`, `aria-valuemin` and `aria-valuemax` set for you." },
+    { tr: "`value={null}` iken `aria-valuenow` yazılmaz, `aria-valuetext` dildeki yükleniyor metnini taşır: \"Yükleniyor…\".", en: "With `value={null}`, `aria-valuenow` is left out and `aria-valuetext` carries the language's loading text: \"Loading…\"." },
     { tr: "`label` çubuğa `aria-labelledby` ile bağlanır. Görünür etiket istemiyorsanız `aria-label` verin.", en: "`label` is tied to the bar with `aria-labelledby`. Pass `aria-label` when you want no visible label." },
     { tr: "Görünen yüzde metni ekran okuyucudan gizlidir; aynı değer `aria-valuetext` ile okunur.", en: "The visible percentage is hidden from screen readers; the same value is read through `aria-valuetext`." },
     { tr: "Ton yalnız renkle anlam taşır. `warn` ve `danger` durumunu etikette ya da yakındaki metinde de söyleyin.", en: "Tone carries meaning through colour alone. State `warn` and `danger` conditions in the label or nearby text as well." },
@@ -149,7 +168,7 @@ export default definePage({
       name: "Progress",
       props: [
         { name: "aria-label", type: "string", description: { tr: "`label` yoksa erişilebilir ad", en: "Accessible name when there is no `label`" } },
-        { name: "value", type: "number | null", required: true, description: { tr: "0 ile 100 arası değer. `null` belirsiz durumdur", en: "A value from 0 to 100. `null` means indeterminate" } },
+        { name: "value", type: "number | null", required: true, description: { tr: "0 ile 100 arası değer. `null` belirsiz durumdur: çubuk kayar, dildeki yükleniyor metni okunur", en: "A value from 0 to 100. `null` means indeterminate: the bar slides and the language's loading text is read" } },
         { name: "label", type: "ReactNode", description: { tr: "Çubuğun üstünde sol tarafta görünen ad", en: "Name shown above the bar on the left" } },
         { name: "showValue", type: "boolean", default: "true", description: { tr: "Yüzde yazısını gösterir", en: "Shows the percentage text" } },
         { name: "tone", type: '"accent" | "ok" | "warn" | "danger"', default: '"accent"', description: { tr: "Çubuk rengi", en: "Bar colour" } },

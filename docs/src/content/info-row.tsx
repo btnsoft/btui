@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Avatar, Badge, Card, InfoRow, Status } from "btui";
+import { Avatar, Badge, Card, InfoList, InfoRow, Status } from "btui";
 import { money, ORDERS, STATUS_LABEL, STATUS_TONE } from "../lib/data";
 import { useLang, useText } from "../lib/i18n";
 import { definePage } from "../lib/schema";
@@ -16,11 +16,23 @@ function Summary() {
   return (
     <Narrow>
       <Card title={ORDER.no} subtitle={ORDER.customer}>
-        <InfoRow label={t({ tr: "Şehir", en: "City" })}>{ORDER.city}</InfoRow>
-        <InfoRow label={t({ tr: "Sorumlu", en: "Owner" })}>{ORDER.owner}</InfoRow>
-        <InfoRow label={t({ tr: "Tutar", en: "Amount" })}>{money(ORDER.amount, lang)}</InfoRow>
-        <InfoRow label={t({ tr: "Durum", en: "Status" })}><Badge tone={STATUS_TONE[ORDER.status]}>{t(STATUS_LABEL[ORDER.status])}</Badge></InfoRow>
+        <InfoList>
+          <InfoRow label={t({ tr: "Şehir", en: "City" })}>{ORDER.city}</InfoRow>
+          <InfoRow label={t({ tr: "Sorumlu", en: "Owner" })}>{ORDER.owner}</InfoRow>
+          <InfoRow label={t({ tr: "Tutar", en: "Amount" })}>{money(ORDER.amount, lang)}</InfoRow>
+          <InfoRow label={t({ tr: "Durum", en: "Status" })}><Badge tone={STATUS_TONE[ORDER.status]}>{t(STATUS_LABEL[ORDER.status])}</Badge></InfoRow>
+        </InfoList>
       </Card>
+    </Narrow>
+  );
+}
+
+function Plain() {
+  const t = useText();
+  const lang = useLang();
+  return (
+    <Narrow>
+      <InfoRow className="erp-total" label={t({ tr: "Ödenecek tutar", en: "Amount due" })}>{money(42800, lang)}</InfoRow>
     </Narrow>
   );
 }
@@ -75,16 +87,18 @@ function Missing() {
 }
 
 export default definePage({
-  summary: { tr: "Tek bir kaydın alanlarını etiket ve değer olarak alt alta dizer. Etiket solda, değer sağda durur.", en: "Lists the fields of one record as label and value pairs. The label sits on the left and the value on the right." },
-  imports: 'import { InfoRow } from "btui";',
+  summary: { tr: "Tek bir kaydın alanlarını etiket ve değer olarak alt alta dizer. Etiket solda, değer sağda durur. `InfoList` satırları tanım listesi olarak bağlar.", en: "Lists the fields of one record as label and value pairs. The label sits on the left and the value on the right. `InfoList` ties the rows together as a description list." },
+  imports: 'import { InfoList, InfoRow } from "btui";',
   hero: {
     Demo: Summary,
     block: true,
     code: `<Card title="SP-1061" subtitle="Ege Tekstil">
-  <InfoRow label="City">{order.city}</InfoRow>
-  <InfoRow label="Owner">{order.owner}</InfoRow>
-  <InfoRow label="Amount">{money(order.amount, lang)}</InfoRow>
-  <InfoRow label="Status"><Badge tone="ok">Done</Badge></InfoRow>
+  <InfoList>
+    <InfoRow label="City">{order.city}</InfoRow>
+    <InfoRow label="Owner">{order.owner}</InfoRow>
+    <InfoRow label="Amount">{money(order.amount, lang)}</InfoRow>
+    <InfoRow label="Status"><Badge tone="ok">Done</Badge></InfoRow>
+  </InfoList>
 </Card>`,
   },
   use: {
@@ -98,10 +112,20 @@ export default definePage({
       { tr: "Paragraf uzunluğunda değerler; dar alanda etiketin yanı daralır", en: "Paragraph length values; the space beside the label runs out" },
     ],
   },
-  anatomy: `<InfoRow label="Label">
-  Value
-</InfoRow>`,
+  anatomy: `<InfoList>
+  <InfoRow label="Label">Value</InfoRow>
+</InfoList>`,
   examples: [
+    {
+      id: "list",
+      title: { tr: "InfoList ile tanım listesi", en: "Description list with InfoList" },
+      body: { tr: "Birden çok satırı `InfoList` içine alın. Liste `<dl>`, etiketler `<dt>`, değerler `<dd>` olarak çizilir, görünüm değişmez ama ekran okuyucu her değeri etiketine bağlar. Üstteki örnek bunu kullanır. Tek satır için `InfoRow` tek başına yeterlidir; `className` satıra sınıf ekler.", en: "Wrap several rows in `InfoList`. The list renders as `<dl>`, labels as `<dt>` and values as `<dd>`. The look stays the same, but a screen reader ties each value to its label. The example above uses it. For a single row `InfoRow` stands alone, and `className` adds a class to the row." },
+      example: {
+        Demo: Plain,
+        block: true,
+        code: `<InfoRow className="erp-total" label="Amount due">{money(42800, lang)}</InfoRow>`,
+      },
+    },
     {
       id: "rich-values",
       title: { tr: "Zengin değerler", en: "Rich values" },
@@ -158,17 +182,27 @@ export default definePage({
     },
   ],
   a11y: [
-    { tr: "Bileşen sade `div` ve `span` çizer, etiket ile değer arasında anlamsal bir bağ kurmaz. Ekran okuyucu ikisini arka arkaya okur, bu yüzden etiketler kendi başına anlaşılır olmalıdır.", en: "The component renders plain `div` and `span` elements with no semantic link between label and value. Screen readers read them in sequence, so labels must make sense on their own." },
+    { tr: "`InfoList` içinde `<dl>`, `<dt>` ve `<dd>` çizilir; etiket ile değer anlamsal olarak bağlanır. Birden çok satırda bunu kullanın.", en: "Inside `InfoList` it renders `<dl>`, `<dt>` and `<dd>`, so label and value are linked semantically. Use it for several rows." },
+    { tr: "`InfoList` dışında sade `div` ve `span` çizer. Ekran okuyucu ikisini arka arkaya okur, bu yüzden etiketler kendi başına anlaşılır olmalıdır.", en: "Outside `InfoList` it renders plain `div` and `span` elements. Screen readers read them in sequence, so labels must make sense on their own." },
     { tr: "Sayfada aynı yapıda çok kayıt varsa gruba `Card` başlığı verin; kullanıcı değerlerin hangi kayda ait olduğunu bilir.", en: "With several similar groups on a page, title each with a `Card`, so people know which record the values belong to." },
     { tr: "Değer olarak yalnız renk kullanmayın; `Status` ve `Badge` metni de taşımalıdır.", en: "Do not use colour alone as a value; `Status` and `Badge` must carry text too." },
   ],
   api: [
     {
       name: "InfoRow",
-      description: { tr: "Yalnız iki prop alır. `className` ve yerel öznitelikler iletilmez.", en: "Takes two props only. `className` and native attributes are not forwarded." },
+      description: { tr: "Yerel öznitelikler iletilmez; yalnız aşağıdaki özellikler geçerlidir.", en: "Native attributes are not forwarded; only the props below apply." },
       props: [
         { name: "label", type: "ReactNode", required: true, description: { tr: "Sol taraftaki etiket", en: "Label on the left" } },
         { name: "children", type: "ReactNode", required: true, description: { tr: "Sağ taraftaki değer", en: "Value on the right" } },
+        { name: "className", type: "string", description: { tr: "Satıra eklenen sınıf", en: "Class added to the row" } },
+      ],
+    },
+    {
+      name: "InfoList",
+      description: { tr: "`InfoRow` satırlarını `<dl>` olarak gruplar.", en: "Groups `InfoRow` lines as a `<dl>`." },
+      props: [
+        { name: "children", type: "ReactNode", required: true, description: { tr: "`InfoRow` öğeleri", en: "`InfoRow` elements" } },
+        { name: "className", type: "string", description: { tr: "Listeye eklenen sınıf", en: "Class added to the list" } },
       ],
     },
   ],

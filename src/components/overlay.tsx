@@ -1,11 +1,11 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState, type CSSProperties, type ReactElement, type ReactNode, type RefObject } from "react";
+import { cloneElement, createContext, useCallback, useContext, useMemo, useRef, useState, type CSSProperties, type ReactElement, type ReactNode, type RefObject } from "react";
 import { AlertDialog } from "@base-ui/react/alert-dialog";
 import { Dialog } from "@base-ui/react/dialog";
 import { Drawer as BaseDrawer } from "@base-ui/react/drawer";
 import { Menu as BaseMenu } from "@base-ui/react/menu";
 import { Toast } from "@base-ui/react/toast";
 import { Tooltip as BaseTooltip } from "@base-ui/react/tooltip";
-import { CheckCircle, Close, ErrorCircle, InfoCircle, WarnTriangle } from "../icons";
+import { CheckCircle, ChevronRight, Close, ErrorCircle, InfoCircle, WarnTriangle } from "../icons";
 import { en, LocaleContext, tr, useLocale, type BtuiLocale } from "../locale";
 import { cx, flag } from "../utils";
 import { Button, IconButton } from "./button";
@@ -56,18 +56,21 @@ export type DrawerProps = {
   title: ReactNode;
   subtitle?: ReactNode;
   width?: number;
+  /** Edge the panel opens from. */
+  side?: "left" | "right";
   footer?: ReactNode;
   children: ReactNode;
+  className?: string;
 };
 
-export function Drawer({ open, onClose, title, subtitle, width, footer, children }: DrawerProps) {
+export function Drawer({ open, onClose, title, subtitle, width, side = "right", footer, children, className }: DrawerProps) {
   const t = useLocale();
   return (
-    <BaseDrawer.Root open={open} onOpenChange={(next) => { if (!next) onClose(); }} swipeDirection="right">
+    <BaseDrawer.Root open={open} onOpenChange={(next) => { if (!next) onClose(); }} swipeDirection={side}>
       <BaseDrawer.Portal>
         <BaseDrawer.Backdrop className="bt-scrim" />
-        <BaseDrawer.Viewport className="bt-drawer-viewport">
-          <BaseDrawer.Popup className="bt-popup bt-drawer" style={width ? ({ "--bt-drawer-width": `${width}px` } as CSSProperties) : undefined}>
+        <BaseDrawer.Viewport className="bt-drawer-viewport" data-side={side}>
+          <BaseDrawer.Popup className={cx("bt-popup bt-drawer", className)} data-side={side} style={width ? ({ "--bt-drawer-width": `${width}px` } as CSSProperties) : undefined}>
             <div className="bt-drawer-head">
               <div style={{ flex: 1, minWidth: 0 }}>
                 <BaseDrawer.Title className="bt-drawer-title">{title}</BaseDrawer.Title>
@@ -91,9 +94,11 @@ export type TooltipProps = {
 };
 
 export function Tooltip({ content, children, side = "top" }: TooltipProps) {
+  // A native title on the child would show a second hint over the tooltip.
+  const trigger = cloneElement(children as ReactElement<Record<string, unknown>>, { title: undefined });
   return (
     <BaseTooltip.Root>
-      <BaseTooltip.Trigger render={children as ReactElement<Record<string, unknown>>} />
+      <BaseTooltip.Trigger render={trigger} />
       <BaseTooltip.Portal>
         <BaseTooltip.Positioner className="bt-positioner" side={side} sideOffset={6}>
           <BaseTooltip.Popup className="bt-popup bt-tooltip">{content}</BaseTooltip.Popup>
@@ -106,16 +111,17 @@ export function Tooltip({ content, children, side = "top" }: TooltipProps) {
 export type MenuProps = {
   /** The element that opens the menu, usually a Button. */
   trigger: ReactElement;
+  side?: "top" | "right" | "bottom" | "left";
   align?: "start" | "center" | "end";
   children: ReactNode;
 };
 
-export function Menu({ trigger, align = "end", children }: MenuProps) {
+export function Menu({ trigger, side = "bottom", align = "end", children }: MenuProps) {
   return (
     <BaseMenu.Root>
       <BaseMenu.Trigger render={trigger as ReactElement<Record<string, unknown>>} />
       <BaseMenu.Portal>
-        <BaseMenu.Positioner className="bt-positioner" sideOffset={6} align={align}>
+        <BaseMenu.Positioner className="bt-positioner" side={side} sideOffset={6} align={align}>
           <BaseMenu.Popup className="bt-popup bt-menu">{children}</BaseMenu.Popup>
         </BaseMenu.Positioner>
       </BaseMenu.Portal>
@@ -128,15 +134,46 @@ export type MenuItemProps = {
   danger?: boolean;
   disabled?: boolean;
   onClick?: () => void;
+  /** Makes the item a link. */
+  href?: string;
   children: ReactNode;
 };
 
-export function MenuItem({ icon, danger, disabled, onClick, children }: MenuItemProps) {
+export function MenuItem({ icon, danger, disabled, onClick, href, children }: MenuItemProps) {
+  if (href && !disabled) {
+    return <BaseMenu.LinkItem className="bt-menu-item" data-danger={flag(danger)} href={href} onClick={onClick}>{icon}{children}</BaseMenu.LinkItem>;
+  }
   return (
     <BaseMenu.Item className="bt-menu-item" data-danger={flag(danger)} disabled={disabled} onClick={onClick}>
       {icon}
       {children}
     </BaseMenu.Item>
+  );
+}
+
+export function MenuGroup({ label, children }: { label: ReactNode; children: ReactNode }) {
+  return (
+    <BaseMenu.Group>
+      <BaseMenu.GroupLabel className="bt-menu-label">{label}</BaseMenu.GroupLabel>
+      {children}
+    </BaseMenu.Group>
+  );
+}
+
+export function SubMenu({ label, icon, disabled, children }: { label: ReactNode; icon?: ReactNode; disabled?: boolean; children: ReactNode }) {
+  return (
+    <BaseMenu.SubmenuRoot>
+      <BaseMenu.SubmenuTrigger className="bt-menu-item" disabled={disabled}>
+        {icon}
+        {label}
+        <span className="bt-menu-arrow"><ChevronRight size={13} /></span>
+      </BaseMenu.SubmenuTrigger>
+      <BaseMenu.Portal>
+        <BaseMenu.Positioner className="bt-positioner" sideOffset={2}>
+          <BaseMenu.Popup className="bt-popup bt-menu">{children}</BaseMenu.Popup>
+        </BaseMenu.Positioner>
+      </BaseMenu.Portal>
+    </BaseMenu.SubmenuRoot>
   );
 }
 
@@ -218,12 +255,21 @@ export type ToastOptions = {
   action?: { label: string; onClick: () => void };
 };
 
-/** Returns a function that shows a toast and gives back its id. */
-export function useToast() {
+type ToastFn = ((options: ToastOptions) => string) & {
+  /** Closes one toast, or every toast when no id is given. */
+  close: (id?: string) => void;
+  /** Changes a toast in place, such as "Saving" to "Saved". */
+  update: (id: string, options: Pick<ToastOptions, "title" | "description" | "tone" | "timeout">) => void;
+};
+
+/** Returns a function that shows a toast and gives back its id, with `close` and `update` on it. */
+export function useToast(): ToastFn {
   const manager = Toast.useToastManager();
-  return useCallback(
+  const show = useCallback(
     ({ title, description, tone = "info", timeout, action }: ToastOptions) => {
       const id: string = manager.add({
+        // Errors interrupt a screen reader; the rest wait their turn.
+        priority: tone === "danger" ? "high" : "low",
         title,
         description,
         type: tone,
@@ -236,6 +282,10 @@ export function useToast() {
     },
     [manager],
   );
+  return useMemo(() => Object.assign(show, {
+    close: (id?: string) => manager.close(id),
+    update: (id: string, { tone, ...rest }: Pick<ToastOptions, "title" | "description" | "tone" | "timeout">) => manager.update(id, { ...rest, ...(tone ? { type: tone } : null) }),
+  }), [show, manager]);
 }
 
 const TOAST_ICONS = {

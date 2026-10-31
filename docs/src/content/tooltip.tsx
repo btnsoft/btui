@@ -15,7 +15,7 @@ function Toolbar() {
     <>
       {items.map(({ Icon, label }) => (
         <Tooltip key={label} content={label}>
-          <IconButton label={label} title={undefined}><Icon size={16} /></IconButton>
+          <IconButton label={label}><Icon size={16} /></IconButton>
         </Tooltip>
       ))}
     </>
@@ -40,7 +40,7 @@ function WithIconButton() {
   const label = t({ tr: "Faturayı yazdır", en: "Print invoice" });
   return (
     <Tooltip content={label}>
-      <IconButton label={label} title={undefined}><IconPrinter size={16} /></IconButton>
+      <IconButton label={label}><IconPrinter size={16} /></IconButton>
     </Tooltip>
   );
 }
@@ -71,10 +71,10 @@ export default definePage({
   hero: {
     Demo: Toolbar,
     code: `<Tooltip content="Send to customer">
-  <IconButton label="Send to customer" title={undefined}><IconSend size={16} /></IconButton>
+  <IconButton label="Send to customer"><IconSend size={16} /></IconButton>
 </Tooltip>
 <Tooltip content="Print invoice">
-  <IconButton label="Print invoice" title={undefined}><IconPrinter size={16} /></IconButton>
+  <IconButton label="Print invoice"><IconPrinter size={16} /></IconButton>
 </Tooltip>`,
   },
   use: {
@@ -108,11 +108,11 @@ export default definePage({
     {
       id: "icon-button",
       title: { tr: "IconButton ile", en: "With IconButton" },
-      body: { tr: "`IconButton`, `label` değerini tarayıcının yerel `title` ipucu olarak da yazar. `Tooltip` ile birlikte iki ipucu görünmesin diye `title={undefined}` verin. Erişilebilir ad `label` üzerinden gelmeye devam eder.", en: "`IconButton` also writes `label` to the browser's native `title` hint. Pass `title={undefined}` so two hints do not appear alongside `Tooltip`. The accessible name still comes from `label`." },
+      body: { tr: "`IconButton`, `label` değerini tarayıcının yerel `title` ipucu olarak da yazar. `Tooltip` çocuğundaki `title` özniteliğini kendisi kaldırır, bu yüzden ikinci bir ipucu görünmez ve ek bir şey yazmanız gerekmez. Erişilebilir ad `label` üzerinden gelmeye devam eder.", en: "`IconButton` also writes `label` to the browser's native `title` hint. `Tooltip` strips the `title` from its child, so no second hint appears and there is nothing extra to write. The accessible name still comes from `label`." },
       example: {
         Demo: WithIconButton,
         code: `<Tooltip content="Print invoice">
-  <IconButton label="Print invoice" title={undefined}><IconPrinter size={16} /></IconButton>
+  <IconButton label="Print invoice"><IconPrinter size={16} /></IconButton>
 </Tooltip>`,
       },
     },
@@ -157,7 +157,7 @@ export default definePage({
       description: { tr: "Fare ile açılma gecikmesi 300 ms'dir ve `BtuiProvider` tarafından ayarlanır.", en: "The hover delay is 300 ms and is set by `BtuiProvider`." },
       props: [
         { name: "content", type: "ReactNode", required: true, description: { tr: "İpucu metni. En fazla 280px genişler", en: "Hint text. Grows to 280px at most" } },
-        { name: "children", type: "ReactElement", required: true, description: { tr: "Tetikleyici. Tek öğe olmalı, ref ve olayları iletmelidir", en: "The trigger. It must be a single element that forwards its ref and events" } },
+        { name: "children", type: "ReactElement", required: true, description: { tr: "Tetikleyici. Tek öğe olmalı, ref ve olayları iletmelidir. `title` özniteliği kaldırılır", en: "The trigger. It must be a single element that forwards its ref and events. Its `title` is stripped" } },
         { name: "side", type: '"top" | "right" | "bottom" | "left"', default: '"top"', description: { tr: "Açılma yönü", en: "Direction the hint opens in" } },
       ],
     },

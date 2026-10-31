@@ -34,7 +34,7 @@ export function Code({ children, lang }: { children: string; lang?: string }) {
   return (
     <div className="d-code">
       {lang ? <span className="d-code-lang">{lang}</span> : null}
-      <pre><code>{highlight(children)}</code></pre>
+      <pre tabIndex={0} aria-label={t({ tr: "Kod örneği", en: "Code sample" })}><code>{highlight(children)}</code></pre>
       <IconButton size="sm" label={copied ? t({ tr: "Kopyalandı", en: "Copied" }) : t({ tr: "Kopyala", en: "Copy" })} onClick={copy}>
         {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
       </IconButton>

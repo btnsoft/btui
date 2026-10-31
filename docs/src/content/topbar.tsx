@@ -178,7 +178,7 @@ export default definePage({
     {
       id: "search",
       title: { tr: "Arama ve kısayol", en: "Search and shortcut" },
-      body: { tr: "`TopbarSearch` yerel `input` özelliklerini alır ve `ref` iletir. `shortcut` yalnız ipucunu gösterir, tuşu sizin bağlamanız gerekir. Burada `/` tuşuna basınca odak aramaya gider. 800 piksel ve altında arama gizlenir; dar ekranda aramaya ulaşmak için ayrı bir yol bırakın.", en: "`TopbarSearch` takes native `input` props and forwards its `ref`. `shortcut` only shows the hint, so binding the key is up to you. Here `/` moves focus to the search. At 800 pixels and below the search is hidden, so leave another way to reach it on narrow screens." },
+      body: { tr: "`TopbarSearch` yerel `input` özelliklerini alır ve `ref` iletir. `shortcut` yalnız ipucunu gösterir, tuşu sizin bağlamanız gerekir. Burada `/` tuşuna basınca odak aramaya gider. 800 piksel ve altında arama görünür kalır, çubuktaki boş yeri doldurur ve yalnız `shortcut` ipucu gizlenir; telefonda klavye kısayolu olmadığından bu ipucu gereksizdir.", en: "`TopbarSearch` takes native `input` props and forwards its `ref`. `shortcut` only shows the hint, so binding the key is up to you. Here `/` moves focus to the search. At 800 pixels and below the search stays visible and fills the free space in the bar, and only the `shortcut` hint is hidden, since a phone has no use for it." },
       example: { Demo: SearchShortcut, block: true, code: `const input = useRef<HTMLInputElement>(null);
 const [query, setQuery] = useState("");
 
@@ -250,7 +250,7 @@ useEffect(() => {
       name: "TopbarSearch",
       description: { tr: "`type` dışındaki tüm yerel `input` öznitelikleri ve ref iletilir.", en: "All native `input` attributes except `type`, and the ref, are forwarded." },
       props: [
-        { name: "shortcut", type: "ReactNode", description: { tr: "Girdinin sağında gösterilen ipucu, genelde `Kbd`", en: "Hint shown to the right of the field, usually a `Kbd`" } },
+        { name: "shortcut", type: "ReactNode", description: { tr: "Girdinin sağında gösterilen ipucu, genelde `Kbd`. Telefonda `Kbd` gizlenir", en: "Hint shown to the right of the field, usually a `Kbd`. On phones a `Kbd` is hidden" } },
         { name: "placeholder", type: "string", default: "locale.search", description: { tr: "Yer tutucu ve erişilebilir ad", en: "Placeholder and accessible name" } },
       ],
     },

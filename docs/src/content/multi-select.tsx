@@ -81,11 +81,14 @@ function Hints() {
 function SelectAll() {
   const t = useText();
   const [customers, setCustomers] = useState<string[]>([]);
+  const [statuses, setStatuses] = useState<string[]>(["open"]);
+  const [cities, setCities] = useState<string[]>([]);
+  const options = STATUS_KEYS.map((status) => ({ value: status, label: t(STATUS_LABEL[status]) }));
   return (
     <>
       <MultiSelect label={t({ tr: "Müşteri", en: "Customer" })} value={customers} onChange={setCustomers} options={CUSTOMER_OPTIONS} placeholder={t({ tr: "Yok", en: "None" })} />
-      <Button size="sm" onClick={() => setCustomers(CUSTOMERS)}>{t({ tr: "Tümünü seç", en: "Select all" })}</Button>
-      <Button size="sm" variant="ghost" onClick={() => setCustomers([])}>{t({ tr: "Temizle", en: "Clear" })}</Button>
+      <MultiSelect bulk label={t({ tr: "Durum", en: "Status" })} value={statuses} onChange={setStatuses} options={options} placeholder={t({ tr: "Yok", en: "None" })} />
+      <MultiSelect bulk={false} label={t({ tr: "Şehir", en: "City" })} value={cities} onChange={setCities} options={CITIES} placeholder={t({ tr: "Yok", en: "None" })} />
     </>
   );
 }
@@ -195,12 +198,12 @@ const rows = cities.length ? orders.filter((o) => cities.includes(o.city)) : ord
     {
       id: "select-all",
       title: { tr: "Tümünü seçmek", en: "Selecting all" },
-      body: { tr: "Bileşende tümünü seçme ya da temizleme düğmesi yoktur. Değer sizin elinizde olduğu için yanına iki `Button` yeterlidir.", en: "The component has no select all or clear button. Since you hold the value, two `Button` elements beside it are enough." },
+      body: { tr: "`bulk` listenin üstüne \"Tümünü seç\" ve \"Temizle\" düğmelerini koyar. Verilmezse altı ve daha fazla seçenekte kendiliğinden açılır: müşteri listesinde vardır. Dört durumlu listede `bulk` ile açıldı, şehir listesinde `bulk={false}` ile kapatıldı. \"Tümünü seç\" arama süzmesini dikkate almaz, kapalı seçenekleri atlar.", en: "`bulk` puts \"Select all\" and \"Clear\" above the list. When left out, it turns on by itself from six options, as in the customer list. The four-status list turns it on with `bulk` and the city list turns it off with `bulk={false}`. \"Select all\" ignores the search filter and skips disabled options." },
       example: {
         Demo: SelectAll,
         code: `<MultiSelect label="Customer" value={customers} onChange={setCustomers} options={CUSTOMERS} placeholder="None" />
-<Button size="sm" onClick={() => setCustomers(allCustomers)}>Select all</Button>
-<Button size="sm" variant="ghost" onClick={() => setCustomers([])}>Clear</Button>`,
+<MultiSelect bulk label="Status" value={statuses} onChange={setStatuses} options={STATUSES} placeholder="None" />
+<MultiSelect bulk={false} label="City" value={cities} onChange={setCities} options={CITIES} placeholder="None" />`,
       },
     },
     {
@@ -245,6 +248,7 @@ const rows = cities.length ? orders.filter((o) => cities.includes(o.city)) : ord
         { name: "label", type: "string", description: { tr: "`filter` görünümünde ön ek, `field` görünümünde erişilebilir ad", en: "A prefix in the `filter` variant, the accessible name in the `field` variant" } },
         { name: "variant", type: '"field" | "filter"', default: '"filter"', description: { tr: "`field` formlar, `filter` filtre çubukları içindir", en: "`field` for forms, `filter` for filter bars" } },
         { name: "size", type: '"sm" | "md"', default: '"md"', description: { tr: "Yükseklik: 26, 32px", en: "Height: 26, 32px" } },
+        { name: "bulk", type: "boolean", default: "options.length >= 6", description: { tr: "Listenin üstünde \"Tümünü seç\" ve \"Temizle\" düğmeleri", en: "\"Select all\" and \"Clear\" buttons above the list" } },
         { name: "disabled", type: "boolean", default: "false", description: { tr: "Seçimi kapatır", en: "Blocks the choice" } },
         { name: "block", type: "boolean", default: "false", description: { tr: "Kabın genişliğini doldurur; `field` görünümü zaten tam genişliktir", en: "Fills its container; the `field` variant is always full width" } },
         { name: "name", type: "string", description: { tr: "Her seçim için aynı adla bir gizli alan oluşturur", en: "Creates one hidden field per choice under this name" } },

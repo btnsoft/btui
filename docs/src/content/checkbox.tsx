@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { Button, Checkbox, Field } from "btui";
 import { ORDERS, money } from "../lib/data";
 import { useLang, useText } from "../lib/i18n";
@@ -114,6 +114,17 @@ function InForm() {
   );
 }
 
+function Focus() {
+  const t = useText();
+  const box = useRef<HTMLElement>(null);
+  return (
+    <>
+      <Checkbox ref={box} label={t({ tr: "Koşulları okudum", en: "I have read the terms" })} />
+      <Button size="sm" onClick={() => box.current?.focus()}>{t({ tr: "Eksik alana git", en: "Go to the missing field" })}</Button>
+    </>
+  );
+}
+
 export default definePage({
   summary: { tr: "Bağımsız bir seçeneği açar ya da kapatır. Ayarlar listelerinde, toplu seçimde ve onay metinlerinde kullanılır; değişiklik genelde kaydet düğmesiyle uygulanır.", en: "Turns an independent option on or off. It is used in settings lists, bulk selection and consent lines, and the change usually applies with a save button." },
   imports: 'import { Checkbox } from "btui";',
@@ -198,6 +209,15 @@ const some = chosen.length > 0 && !all;
       },
     },
     {
+      id: "ref",
+      title: { tr: "Ref ile odak", en: "Focus through a ref" },
+      body: { tr: "`ref` kutunun kök öğesine iletilir. Form gönderilemediğinde odağı eksik kutuya taşımak için kullanın.", en: "`ref` reaches the root element of the box. Use it to move focus to the missing box when a form cannot be submitted." },
+      example: { Demo: Focus, code: `const box = useRef<HTMLElement>(null);
+
+<Checkbox ref={box} label="I have read the terms" />
+<Button size="sm" onClick={() => box.current?.focus()}>Go to the missing field</Button>` },
+    },
+    {
       id: "form",
       title: { tr: "Form gönderimi", en: "Form submission" },
       body: { tr: "İşaretli kutu `name` ile `on` değerini gönderir, işaretsiz kutu hiç gönderilmez. `required` işaretlenmeden gönderimi durdurur. Formu gönderip farkı görün.", en: "A ticked box submits `on` under its `name`, while an unticked box is not sent at all. `required` stops the submission until it is ticked. Submit the form to see the difference." },
@@ -225,7 +245,7 @@ const some = chosen.length > 0 && !all;
   api: [
     {
       name: "Checkbox",
-      description: { tr: "Yerel öznitelikler ve ref iletilmez; yalnız aşağıdaki proplar geçerlidir.", en: "Native attributes and the ref are not forwarded; only the props below apply." },
+      description: { tr: "Ref kök öğeye iletilir. Yerel öznitelikler iletilmez; yalnız aşağıdaki özellikler geçerlidir.", en: "The ref reaches the root element. Native attributes are not forwarded; only the props below apply." },
       props: [
         { name: "checked", type: "boolean", description: { tr: "Denetimli durum", en: "Controlled state" } },
         { name: "defaultChecked", type: "boolean", default: "false", description: { tr: "Denetimsiz başlangıç durumu", en: "Uncontrolled initial state" } },
@@ -235,7 +255,7 @@ const some = chosen.length > 0 && !all;
         { name: "hint", type: "ReactNode", description: { tr: "Etiketin altında soluk açıklama. `label` ile birlikte görünür", en: "Quieter text under the label. Shown together with `label`" } },
         { name: "disabled", type: "boolean", default: "false", description: { tr: "Kutuyu kapatır", en: "Turns the box off" } },
         { name: "required", type: "boolean", default: "false", description: { tr: "İşaretlenmeden formun gönderilmesini engeller", en: "Blocks form submission until the box is ticked" } },
-        { name: "className", type: "string", description: { tr: "Dış öğeye eklenir", en: "Added to the outer element" } },
+        { name: "className", type: "string", description: { tr: "`label` verildiğinde dış öğeye, yoksa kutunun kendisine eklenir", en: "Added to the outer element when `label` is set, otherwise to the box itself" } },
         { name: "name", type: "string", description: { tr: "Form gönderiminde kullanılan ad", en: "Name used on form submission" } },
         { name: "aria-label", type: "string", description: { tr: "`label` yoksa erişilebilir ad", en: "Accessible name when there is no `label`" } },
       ],

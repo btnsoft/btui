@@ -29,6 +29,25 @@ function Status() {
   );
 }
 
+function Uncontrolled() {
+  const t = useText();
+  const options = useStatusOptions();
+  const [sent, setSent] = useState("");
+  const submit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSent(JSON.stringify(Object.fromEntries(new FormData(e.currentTarget))));
+  };
+  return (
+    <form className="d-stack" onSubmit={submit}>
+      <Field label={t({ tr: "Sipariş durumu", en: "Order status" })}>
+        <Select name="status" defaultValue="pending" options={options} />
+      </Field>
+      <Button type="submit" variant="primary">{t({ tr: "Kaydet", en: "Save" })}</Button>
+      {sent ? <code>{sent}</code> : null}
+    </form>
+  );
+}
+
 function Searchable() {
   const t = useText();
   const [city, setCity] = useState("");
@@ -187,6 +206,20 @@ export default definePage({
 </Field>`,
   examples: [
     {
+      id: "uncontrolled",
+      title: { tr: "Denetimsiz kullanım", en: "Uncontrolled" },
+      body: { tr: "`value` vermezseniz bileşen değeri kendisi tutar; `defaultValue` başlangıcı belirler, `onChange` isteğe bağlıdır. Yalnız formla gönderilecek alanlarda durum yazmanız gerekmez, `name` yeterlidir. Değeri ekranda başka yerde de kullanacaksanız `value` ve `onChange` verin.", en: "Leave out `value` and the component keeps the value itself; `defaultValue` sets the start and `onChange` is optional. For fields that only go out with a form you need no state, just `name`. Pass `value` and `onChange` when the value is used elsewhere on screen." },
+      example: {
+        Demo: Uncontrolled,
+        code: `<form onSubmit={submit}>
+  <Field label="Order status">
+    <Select name="status" defaultValue="pending" options={STATUSES} />
+  </Field>
+  <Button type="submit" variant="primary">Save</Button>
+</form>`,
+      },
+    },
+    {
       id: "search",
       title: { tr: "Aramalı liste", en: "Search in the list" },
       body: { tr: "Dokuz ve daha fazla seçenekte listenin başına arama kutusu gelir. Arama yalnız `label` içinde yapılır ve `BtuiProvider` diline göre çalışır: Türkçede \"i\" yazınca \"İzmir\" de bulunur. Listeyi açıp yazmayı deneyin.", en: "From nine options up, a search box sits at the top of the list. Search only looks in `label` and follows the `BtuiProvider` language: in Turkish, typing \"i\" also finds \"İzmir\". Open the list and try typing." },
@@ -296,10 +329,11 @@ export default definePage({
   api: [
     {
       name: "Select",
-      description: { tr: "Yalnız denetimli çalışır: `value` ve `onChange` zorunludur, `defaultValue` yoktur. Ref ve yerel öznitelikler iletilmez.", en: "It only works controlled: `value` and `onChange` are required and there is no `defaultValue`. The ref and native attributes are not forwarded." },
+      description: { tr: "Denetimli ya da denetimsiz çalışır: `value` verilmezse değeri kendisi tutar. Ref ve yerel öznitelikler iletilmez.", en: "It works controlled or uncontrolled: without `value` it keeps the value itself. The ref and native attributes are not forwarded." },
       props: [
-        { name: "value", type: "string", required: true, description: { tr: "Seçili değer; boş metin seçim yok demektir", en: "The chosen value; an empty string means no choice" } },
-        { name: "onChange", type: "(value: string) => void", required: true, description: { tr: "Yeni değeri bildirir; temizleyince boş metin", en: "Reports the new value; an empty string when cleared" } },
+        { name: "value", type: "string", description: { tr: "Denetimli değer; boş metin seçim yok demektir", en: "Controlled value; an empty string means no choice" } },
+        { name: "defaultValue", type: "string", default: '""', description: { tr: "Denetimsiz başlangıç değeri", en: "Uncontrolled initial value" } },
+        { name: "onChange", type: "(value: string) => void", description: { tr: "Yeni değeri bildirir; temizleyince boş metin", en: "Reports the new value; an empty string when cleared" } },
         { name: "options", type: "SelectOption[]", required: true, description: { tr: "Seçenekler", en: "The options" } },
         { name: "placeholder", type: "string", default: "locale.select", description: { tr: "Seçim yokken görünen metin", en: "Text shown with no choice" } },
         { name: "label", type: "string", description: { tr: "`filter` görünümünde ön ek olur, örn. \"Şehir: İzmir\"; `field` görünümünde erişilebilir ad olur", en: "A prefix in the `filter` variant, as in \"City: Izmir\"; the accessible name in the `field` variant" } },

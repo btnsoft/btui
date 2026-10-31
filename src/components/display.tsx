@@ -79,7 +79,7 @@ export type EmptyStateProps = {
 export function EmptyState({ icon, title, children, action }: EmptyStateProps) {
   const t = useLocale();
   return (
-    <div className="bt-empty">
+    <div className="bt-empty" role="status">
       {icon ? <div className="bt-empty-icon">{icon}</div> : null}
       {title ? <b className="bt-empty-title">{title}</b> : null}
       <div>{children ?? (title ? null : t.empty)}</div>

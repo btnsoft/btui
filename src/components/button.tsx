@@ -51,16 +51,33 @@ export type IconButtonProps = ComponentPropsWithoutRef<typeof BaseButton> & {
   size?: "sm" | "md";
   /** Filled look used for row actions in tables. */
   solid?: boolean;
+  /** Marks a destructive action. */
+  tone?: "default" | "danger";
+  /** Shows a spinner, blocks clicks and stays focusable. */
+  loading?: boolean;
   className?: string;
 };
 
 export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconButton(
-  { label, size = "md", solid, className, children, ...rest },
+  { label, size = "md", solid, tone = "default", loading, disabled, className, children, ...rest },
   ref,
 ) {
   return (
-    <BaseButton ref={ref} aria-label={label} title={label} className={cx("bt-icon-btn", className)} data-size={size} data-solid={flag(solid)} {...rest}>
-      {children}
+    <BaseButton
+      ref={ref}
+      aria-label={label}
+      title={label}
+      aria-busy={loading || undefined}
+      disabled={disabled || loading}
+      focusableWhenDisabled={loading || undefined}
+      className={cx("bt-icon-btn", className)}
+      data-size={size}
+      data-solid={flag(solid)}
+      data-tone={tone}
+      data-loading={flag(loading)}
+      {...rest}
+    >
+      {loading ? <span className="bt-btn-spin" aria-hidden="true" /> : children}
     </BaseButton>
   );
 });
