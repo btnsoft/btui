@@ -53,6 +53,16 @@ function SelectAll() {
   );
 }
 
+function Hints() {
+  const t = useText();
+  return (
+    <div className="d-stack">
+      <Checkbox defaultChecked label={t({ tr: "E-fatura mükellefi", en: "E-invoice taxpayer" })} hint={t({ tr: "Faturalar e-belge olarak düzenlenir", en: "Invoices are issued as e-documents" })} />
+      <Checkbox label={t({ tr: "KDV'den muaf", en: "VAT exempt" })} hint={t({ tr: "Muafiyet belgesi cari kartına eklenmelidir", en: "Attach the exemption certificate to the account" })} />
+    </div>
+  );
+}
+
 function Disabled() {
   const t = useText();
   return (
@@ -151,6 +161,19 @@ const some = chosen.length > 0 && !all;
       },
     },
     {
+      id: "hints",
+      title: { tr: "Açıklama satırı", en: "Hint text" },
+      body: { tr: "Seçeneğin sonucu etiketten anlaşılmıyorsa `hint` ile tek cümlede anlatın. Açıklama da tıklanabilir alanın içindedir.", en: "When a label does not explain the outcome, use `hint` for one sentence. The hint is part of the clickable area too." },
+      example: {
+        Demo: Hints,
+        code: `<Checkbox
+  defaultChecked
+  label="E-invoice taxpayer"
+  hint="Invoices are issued as e-documents"
+/>`,
+      },
+    },
+    {
       id: "without-label",
       title: { tr: "Etiketsiz", en: "Without a label" },
       body: { tr: "Tablo satırı gibi bağlamın görsel olarak açık olduğu yerlerde `label` vermeyebilirsiniz. Bu durumda `aria-label` şarttır ve kayıt numarasını içermelidir.", en: "Where the context is visually clear, as in a table row, you can leave out `label`. Then `aria-label` is a must and should include the record number." },
@@ -207,7 +230,9 @@ const some = chosen.length > 0 && !all;
         { name: "indeterminate", type: "boolean", default: "false", description: { tr: "Kısmi seçimi gösterir", en: "Shows a partial selection" } },
         { name: "onChange", type: "(checked: boolean) => void", description: { tr: "Yeni durumu bildirir", en: "Reports the new state" } },
         { name: "label", type: "ReactNode", description: { tr: "Kutunun yanındaki metin", en: "Text beside the box" } },
+        { name: "hint", type: "ReactNode", description: { tr: "Etiketin altında soluk açıklama. `label` ile birlikte görünür", en: "Quieter text under the label. Shown together with `label`" } },
         { name: "disabled", type: "boolean", default: "false", description: { tr: "Kutuyu kapatır", en: "Turns the box off" } },
+        { name: "className", type: "string", description: { tr: "Dış öğeye eklenir", en: "Added to the outer element" } },
         { name: "name", type: "string", description: { tr: "Form gönderiminde kullanılan ad", en: "Name used on form submission" } },
         { name: "aria-label", type: "string", description: { tr: "`label` yoksa erişilebilir ad", en: "Accessible name when there is no `label`" } },
       ],

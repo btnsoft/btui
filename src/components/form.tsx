@@ -6,7 +6,7 @@ import { NumberField } from "@base-ui/react/number-field";
 import { Radio } from "@base-ui/react/radio";
 import { RadioGroup as BaseRadioGroup } from "@base-ui/react/radio-group";
 import { Switch as BaseSwitch } from "@base-ui/react/switch";
-import { Check, Search } from "../icons";
+import { Search } from "../icons";
 import { useLocale } from "../locale";
 import { cx, flag } from "../utils";
 
@@ -202,10 +202,13 @@ export type CheckboxProps = {
   disabled?: boolean;
   name?: string;
   label?: ReactNode;
+  /** Quieter text under the label. */
+  hint?: ReactNode;
+  className?: string;
   "aria-label"?: string;
 };
 
-export function Checkbox({ checked, defaultChecked, indeterminate, onChange, disabled, name, label, "aria-label": ariaLabel }: CheckboxProps) {
+export function Checkbox({ checked, defaultChecked, indeterminate, onChange, disabled, name, label, hint, className, "aria-label": ariaLabel }: CheckboxProps) {
   const control = (
     <BaseCheckbox.Root
       name={name}
@@ -215,16 +218,27 @@ export function Checkbox({ checked, defaultChecked, indeterminate, onChange, dis
       onCheckedChange={(next) => onChange?.(next)}
       disabled={disabled}
       aria-label={ariaLabel}
-      className="bt-check"
+      className={cx("bt-check", !label && className)}
     >
-      <BaseCheckbox.Indicator>{indeterminate ? "–" : <Check size={12} />}</BaseCheckbox.Indicator>
+      <BaseCheckbox.Indicator className="bt-check-mark">
+        {indeterminate ? (
+          <span className="bt-check-dash" />
+        ) : (
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="square" aria-hidden="true">
+            <path d="M2 6.5 4.8 9.2 10 3" pathLength="1" />
+          </svg>
+        )}
+      </BaseCheckbox.Indicator>
     </BaseCheckbox.Root>
   );
   if (!label) return control;
   return (
-    <label className="bt-check-wrap">
+    <label className={cx("bt-check-wrap", className)}>
       {control}
-      <span>{label}</span>
+      <span className="bt-check-text">
+        {label}
+        {hint ? <small>{hint}</small> : null}
+      </span>
     </label>
   );
 }

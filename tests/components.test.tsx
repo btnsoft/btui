@@ -2,7 +2,7 @@ import { useState } from "react";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { useToast, Accordion, Alert, Avatar, BtuiProvider, Button, DataTable, Sidebar, Tabs, Field, FileDropzone, Input, Modal, MultiSelect, NumberInput, RadioGroup, Select, Switch, pageRange, sortRows, useConfirm, type Column } from "../src";
+import { useToast, Accordion, Alert, Avatar, BtuiProvider, Checkbox, Button, DataTable, Sidebar, Tabs, Field, FileDropzone, Input, Modal, MultiSelect, NumberInput, RadioGroup, Select, Switch, pageRange, sortRows, useConfirm, type Column } from "../src";
 import { fileMatchesAccept, includesText } from "../src/utils";
 
 type Row = { id: number; name: string; km: number | null };
@@ -356,5 +356,22 @@ describe("toast", () => {
     await user.click(await screen.findByRole("button", { name: "Geri al" }));
     expect(onUndo).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(screen.queryByText("Arşivlendi")).toBeNull());
+  });
+});
+
+describe("Checkbox", () => {
+  it("toggles from the label and the hint text", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<Checkbox label="KDV muaf" hint="Belge gerekir" onChange={onChange} />);
+    await user.click(screen.getByText("Belge gerekir"));
+    expect(onChange).toHaveBeenLastCalledWith(true);
+    expect(screen.getByRole("checkbox")).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("shows a dash when indeterminate", () => {
+    const { container } = render(<Checkbox indeterminate aria-label="Tümü" />);
+    expect(container.querySelector(".bt-check-dash")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Tümü" })).toHaveAttribute("aria-checked", "mixed");
   });
 });
