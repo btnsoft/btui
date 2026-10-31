@@ -140,7 +140,7 @@ function InForm() {
         <Select name="status" value={status} onChange={setStatus} options={options} />
       </Field>
       <Field label={t({ tr: "Şehir", en: "City" })}>
-        <Select name="city" value={city} onChange={setCity} options={CITIES} />
+        <Select name="city" required value={city} onChange={setCity} options={CITIES} clearable />
       </Field>
       <Button type="submit" variant="primary">{t({ tr: "Kaydet", en: "Save" })}</Button>
       {sent ? <code>{sent}</code> : null}
@@ -263,7 +263,7 @@ export default definePage({
     {
       id: "form",
       title: { tr: "Form gönderimi", en: "Form submission" },
-      body: { tr: "`name` verildiğinde seçilen `value` gizli bir alanla forma eklenir, `label` gönderilmez. Formu gönderip çıkan veriye bakın.", en: "With `name`, the chosen `value` joins the form through a hidden field, and `label` is not sent. Submit the form to see the data." },
+      body: { tr: "`name` verildiğinde seçilen `value` gizli bir alanla forma eklenir, `label` gönderilmez. `required` boş seçimle gönderimi durdurur. Formu gönderip çıkan veriye bakın.", en: "With `name`, the chosen `value` joins the form through a hidden field, and `label` is not sent. `required` stops the submission with no choice. Submit the form to see the data." },
       example: {
         Demo: InForm,
         code: `<form onSubmit={submit}>
@@ -271,7 +271,7 @@ export default definePage({
     <Select name="status" value={status} onChange={setStatus} options={STATUSES} />
   </Field>
   <Field label="City">
-    <Select name="city" value={city} onChange={setCity} options={CITIES} />
+    <Select name="city" required value={city} onChange={setCity} options={CITIES} clearable />
   </Field>
   <Button type="submit" variant="primary">Save</Button>
 </form>`,
@@ -308,6 +308,7 @@ export default definePage({
         { name: "searchable", type: "boolean", default: "options.length > 8", description: { tr: "Listede arama kutusu", en: "Search box in the list" } },
         { name: "clearable", type: "boolean", default: "false", description: { tr: "Temizleme düğmesi; değer varken ve kapalı değilken görünür", en: "Clear button; shows while there is a value and the box is enabled" } },
         { name: "disabled", type: "boolean", default: "false", description: { tr: "Seçimi kapatır", en: "Blocks the choice" } },
+        { name: "required", type: "boolean", default: "false", description: { tr: "Seçim yapılmadan formun gönderilmesini engeller", en: "Blocks form submission until a value is chosen" } },
         { name: "block", type: "boolean", default: "false", description: { tr: "Kabın genişliğini doldurur; `field` görünümü zaten tam genişliktir", en: "Fills its container; the `field` variant is always full width" } },
         { name: "name", type: "string", description: { tr: "Form gönderiminde kullanılan ad", en: "Name used on form submission" } },
         { name: "className", type: "string", description: { tr: "Dış kaba eklenen sınıf", en: "Class added to the outer wrapper" } },

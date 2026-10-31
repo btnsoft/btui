@@ -49,7 +49,7 @@ export default function Home() {
   const t = useText();
   const lang = useLang();
   const features = [
-    { icon: IconTable, title: { tr: "Tablo merkezli", en: "Table first" }, text: { tr: "Sıralama, sayfalama, kolon seçimi, toplu işlem ve sunucu modu tek bileşende.", en: "Sorting, paging, column choice, bulk actions and server mode in one component." } },
+    { icon: IconTable, title: { tr: "Lisanssız güçlü ızgara", en: "A serious grid, no licence" }, text: { tr: "100 bin satır, filtre, gruplama, pivot, Excel, hücre seçimi ve yerinde düzenleme. Lisans ücreti yok.", en: "100k rows, filters, grouping, pivot, Excel, cell selection and inline editing. No licence fee." } },
     { icon: IconLayoutGrid, title: { tr: "Keskin ve yoğun", en: "Sharp and dense" }, text: { tr: "Kurumsal ekranlar için tasarlandı: az köşe, az gölge, çok bilgi.", en: "Made for corporate screens: few curves, few shadows, plenty of information." } },
     { icon: IconKeyboard, title: { tr: "Erişilebilir temel", en: "Accessible core" }, text: { tr: "Klavye, odak ve ekran okuyucu davranışı Base UI'dan gelir.", en: "Keyboard, focus and screen reader behaviour come from Base UI." } },
     { icon: IconLanguage, title: { tr: "Türkçe doğru çalışır", en: "Turkish done right" }, text: { tr: "Arama \"izmir\" yazınca \"İzmir\"i bulur, sıralama Ç ve Ş'yi doğru yere koyar.", en: "Search matches \"İzmir\" from \"izmir\", sorting places Ç and Ş correctly." } },
@@ -65,7 +65,7 @@ export default function Home() {
           <p className="d-lead">{t({ tr: "btui; listeler, filtreler, formlar ve onay akışlarıyla dolu ekranlar için hazır, keskin ve yoğun bileşenler sunar.", en: "btui gives you ready, sharp and dense components for screens full of lists, filters, forms and approval flows." })}</p>
           <div className="h-actions">
             <Button size="lg" variant="primary" iconEnd={<IconArrowRight size={16} />} render={<a href={`#/${lang}/installation`} />} nativeButton={false}>{t({ tr: "Başla", en: "Get started" })}</Button>
-            <Button size="lg" render={<a href={`#/${lang}/data-table`} />} nativeButton={false}>DataTable</Button>
+            <Button size="lg" render={<a href={`#/${lang}/data-grid`} />} nativeButton={false}>{t({ tr: "Izgarayı gör", en: "See the grid" })}</Button>
           </div>
         </div>
         <Code>{"npm install github:btnsoft/btui"}</Code>

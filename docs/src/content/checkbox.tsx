@@ -89,8 +89,8 @@ function Consent() {
   const [accepted, setAccepted] = useState(false);
   return (
     <div className="d-stack">
-      <Field hint={t({ tr: "Sözleşme her yıl yenilenir", en: "The contract renews every year" })} error={accepted ? undefined : t({ tr: "Devam etmek için kabul edin", en: "Accept to continue" })}>
-        <Checkbox checked={accepted} onChange={setAccepted} label={t({ tr: "Bayilik sözleşmesini kabul ediyorum", en: "I accept the dealer contract" })} />
+      <Field label={t({ tr: "Bayilik sözleşmesi", en: "Dealer contract" })} hint={t({ tr: "Sözleşme her yıl yenilenir", en: "The contract renews every year" })} error={accepted ? undefined : t({ tr: "Devam etmek için kabul edin", en: "Accept to continue" })}>
+        <Checkbox checked={accepted} onChange={setAccepted} label={t({ tr: "Okudum, kabul ediyorum", en: "I have read and accept it" })} />
       </Field>
     </div>
   );
@@ -107,6 +107,7 @@ function InForm() {
     <form className="d-stack" onSubmit={submit}>
       <Checkbox name="eInvoice" defaultChecked label={t({ tr: "E-fatura mükellefi", en: "E-invoice taxpayer" })} />
       <Checkbox name="exempt" label={t({ tr: "KDV'den muaf", en: "VAT exempt" })} />
+      <Checkbox name="terms" required label={t({ tr: "Koşulları kabul ediyorum", en: "I accept the terms" })} />
       <Button type="submit" variant="primary">{t({ tr: "Kaydet", en: "Save" })}</Button>
       {sent ? <code>{sent}</code> : null}
     </form>
@@ -188,23 +189,24 @@ const some = chosen.length > 0 && !all;
     {
       id: "consent",
       title: { tr: "Onay ve hata", en: "Consent and errors" },
-      body: { tr: "Açıklama ve hata için `Field` kullanın ama `Field` üzerinde `label` vermeyin; aksi halde kutunun adı alan etiketi olur ve kendi etiketi okunmaz.", en: "Use `Field` for the hint and error, but leave out `label` on `Field`; otherwise the box is named by the field label and its own label is not read." },
+      body: { tr: "`Field` başlık, açıklama ve hatayı verir. Alan etiketi kutunun üstünde başlık olur, kutu kendi `label` metniyle okunur. `Checkbox` `Field` öğesinin doğrudan çocuğu olmalıdır.", en: "`Field` gives the caption, hint and error. The field label sits above as a caption, and the box is read by its own `label`. `Checkbox` must be a direct child of `Field`." },
       example: {
         Demo: Consent,
-        code: `<Field hint="The contract renews every year" error={accepted ? undefined : "Accept to continue"}>
-  <Checkbox checked={accepted} onChange={setAccepted} label="I accept the dealer contract" />
+        code: `<Field label="Dealer contract" hint="The contract renews every year" error={accepted ? undefined : "Accept to continue"}>
+  <Checkbox checked={accepted} onChange={setAccepted} label="I have read and accept it" />
 </Field>`,
       },
     },
     {
       id: "form",
       title: { tr: "Form gönderimi", en: "Form submission" },
-      body: { tr: "İşaretli kutu `name` ile `on` değerini gönderir, işaretsiz kutu hiç gönderilmez. Formu gönderip farkı görün.", en: "A ticked box submits `on` under its `name`, while an unticked box is not sent at all. Submit the form to see the difference." },
+      body: { tr: "İşaretli kutu `name` ile `on` değerini gönderir, işaretsiz kutu hiç gönderilmez. `required` işaretlenmeden gönderimi durdurur. Formu gönderip farkı görün.", en: "A ticked box submits `on` under its `name`, while an unticked box is not sent at all. `required` stops the submission until it is ticked. Submit the form to see the difference." },
       example: {
         Demo: InForm,
         code: `<form onSubmit={submit}>
   <Checkbox name="eInvoice" defaultChecked label="E-invoice taxpayer" />
   <Checkbox name="exempt" label="VAT exempt" />
+  <Checkbox name="terms" required label="I accept the terms" />
   <Button type="submit" variant="primary">Save</Button>
 </form>`,
       },
@@ -232,6 +234,7 @@ const some = chosen.length > 0 && !all;
         { name: "label", type: "ReactNode", description: { tr: "Kutunun yanındaki metin", en: "Text beside the box" } },
         { name: "hint", type: "ReactNode", description: { tr: "Etiketin altında soluk açıklama. `label` ile birlikte görünür", en: "Quieter text under the label. Shown together with `label`" } },
         { name: "disabled", type: "boolean", default: "false", description: { tr: "Kutuyu kapatır", en: "Turns the box off" } },
+        { name: "required", type: "boolean", default: "false", description: { tr: "İşaretlenmeden formun gönderilmesini engeller", en: "Blocks form submission until the box is ticked" } },
         { name: "className", type: "string", description: { tr: "Dış öğeye eklenir", en: "Added to the outer element" } },
         { name: "name", type: "string", description: { tr: "Form gönderiminde kullanılan ad", en: "Name used on form submission" } },
         { name: "aria-label", type: "string", description: { tr: "`label` yoksa erişilebilir ad", en: "Accessible name when there is no `label`" } },

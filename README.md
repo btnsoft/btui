@@ -30,8 +30,8 @@ export function App() {
 ## İçindekiler
 
 - **Eylem:** Button, IconButton, ButtonGroup, Menu
-- **Form:** Field, Input, NumberInput, Textarea, SearchInput, Select, MultiSelect, Checkbox, RadioGroup, Switch, FileDropzone
-- **Veri:** DataTable, Pagination, Card, Kpi, InfoRow, Badge, Status, Chip, Avatar, Kbd, EmptyState
+- **Form:** Field, Input, NumberInput, Textarea, SearchInput, Select, MultiSelect, Checkbox, RadioGroup, Switch, DatePicker, DateRangePicker, Calendar, FileDropzone
+- **Veri:** DataTable (100 bin satır, kolon filtreleri, gruplama, pivot, hücre seçimi, yerinde düzenleme, gerçek .xlsx, sunucu veri modeli), Pagination, Card, Kpi, InfoRow, Badge, Status, Chip, Avatar, Kbd, EmptyState
 - **Geri bildirim:** Alert, useToast, useConfirm, Progress, Spinner, Loading, Skeleton
 - **Katmanlar:** Modal, Drawer, Popover, Tooltip
 - **Yerleşim:** AppShell, Sidebar, Topbar, Breadcrumb, PageHeader, FilterBar, Tabs, Accordion

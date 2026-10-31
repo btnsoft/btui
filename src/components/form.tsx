@@ -1,4 +1,4 @@
-import { forwardRef, useId, type ComponentPropsWithoutRef, type ReactNode } from "react";
+import { Children, cloneElement, createContext, forwardRef, isValidElement, useContext, useId, useMemo, type ComponentPropsWithoutRef, type ReactElement, type ReactNode } from "react";
 import { Checkbox as BaseCheckbox } from "@base-ui/react/checkbox";
 import { Field as BaseField } from "@base-ui/react/field";
 import { Input as BaseInput } from "@base-ui/react/input";
@@ -20,11 +20,38 @@ export type FieldProps = {
   children: ReactNode;
 };
 
+type FieldInfo = { name?: string; labelled: boolean };
+const InFieldContext = createContext<FieldInfo | null>(null);
+
+/** What the surrounding Field knows, for controls that do their own form wiring. */
+export function useFieldInfo() {
+  return useContext(InFieldContext);
+}
+
+/** `always` and a labelled `labelled` control name their own options, so Field only captions them. */
+type GroupControl = { btGroup?: "always" | "labelled" };
+
+function asGroupControl(children: ReactNode) {
+  const only = Children.count(children) === 1 && isValidElement(children) ? (children as ReactElement<{ label?: ReactNode }>) : null;
+  const group = (only?.type as GroupControl | undefined)?.btGroup;
+  return only && (group === "always" || (group === "labelled" && only.props.label)) ? only : null;
+}
+
+/** Gives each option in a group its own label wiring. Base UI allows this only inside a Field. */
+export function FieldItem({ children }: { children: ReactNode }) {
+  return useContext(InFieldContext) ? <BaseField.Item className="bt-field-item">{children}</BaseField.Item> : children;
+}
+
 export function Field({ label, hint, error, name, className, children }: FieldProps) {
+  const labelId = useId();
+  const group = asGroupControl(children);
+  const info = useMemo(() => ({ name, labelled: !!label }), [name, label]);
   return (
     <BaseField.Root name={name} invalid={error ? true : undefined} className={cx("bt-field", className)} data-invalid={flag(error)}>
-      {label ? <BaseField.Label className="bt-label">{label}</BaseField.Label> : null}
-      {children}
+      {!label ? null : group ? <span id={labelId} className="bt-label">{label}</span> : <BaseField.Label className="bt-label">{label}</BaseField.Label>}
+      <InFieldContext.Provider value={info}>
+        {group && label ? cloneElement(group, { "aria-labelledby": labelId } as Record<string, string>) : children}
+      </InFieldContext.Provider>
       {error ? (
         <BaseField.Error match className="bt-field-error">{error}</BaseField.Error>
       ) : hint ? (
@@ -66,11 +93,13 @@ export type NumberInputProps = {
   /** Hides the minus and plus buttons. */
   hideSteppers?: boolean;
   disabled?: boolean;
+  required?: boolean;
   name?: string;
+  className?: string;
   "aria-label"?: string;
 };
 
-export function NumberInput({ value, defaultValue, onChange, min, max, step, format, hideSteppers, disabled, name, "aria-label": ariaLabel }: NumberInputProps) {
+export function NumberInput({ value, defaultValue, onChange, min, max, step, format, hideSteppers, disabled, required, name, className, "aria-label": ariaLabel }: NumberInputProps) {
   const t = useLocale();
   return (
     <NumberField.Root
@@ -83,9 +112,10 @@ export function NumberInput({ value, defaultValue, onChange, min, max, step, for
       format={format}
       locale={t.lang}
       disabled={disabled}
+      required={required}
       name={name}
     >
-      <NumberField.Group className="bt-input-wrap">
+      <NumberField.Group className={cx("bt-input-wrap", className)}>
         {hideSteppers ? null : <NumberField.Decrement className="bt-number-btn" aria-label={t.decrease}>−</NumberField.Decrement>}
         <NumberField.Input className="bt-input bt-number" aria-label={ariaLabel} />
         {hideSteppers ? null : <NumberField.Increment className="bt-number-btn" aria-label={t.increase}>+</NumberField.Increment>}
@@ -103,29 +133,36 @@ export type RadioGroupProps = {
   onChange?: (value: string) => void;
   orientation?: "vertical" | "horizontal";
   disabled?: boolean;
+  required?: boolean;
   name?: string;
+  className?: string;
   "aria-label"?: string;
+  "aria-labelledby"?: string;
 };
 
-export function RadioGroup({ options, value, defaultValue, onChange, orientation = "vertical", disabled, name, "aria-label": ariaLabel }: RadioGroupProps) {
+export function RadioGroup({ options, value, defaultValue, onChange, orientation = "vertical", disabled, required, name, className, "aria-label": ariaLabel, "aria-labelledby": labelledBy }: RadioGroupProps) {
   return (
     <BaseRadioGroup
       value={value}
       defaultValue={defaultValue}
       onValueChange={(next) => onChange?.(next as string)}
       disabled={disabled}
+      required={required}
       name={name}
       aria-label={ariaLabel}
-      className="bt-radios"
+      aria-labelledby={labelledBy}
+      className={cx("bt-radios", className)}
       data-orientation={orientation}
     >
       {options.map((option) => (
-        <label key={option.value} className="bt-radio-wrap">
-          <Radio.Root value={option.value} disabled={option.disabled} className="bt-radio">
-            <Radio.Indicator className="bt-radio-dot" />
-          </Radio.Root>
-          <span>{option.label}{option.hint ? <small>{option.hint}</small> : null}</span>
-        </label>
+        <FieldItem key={option.value}>
+          <label className="bt-radio-wrap">
+            <Radio.Root value={option.value} disabled={option.disabled} className="bt-radio">
+              <Radio.Indicator className="bt-radio-dot" />
+            </Radio.Root>
+            <span>{option.label}{option.hint ? <small>{option.hint}</small> : null}</span>
+          </label>
+        </FieldItem>
       ))}
     </BaseRadioGroup>
   );
@@ -141,11 +178,12 @@ export type SearchInputProps = Omit<ComponentPropsWithoutRef<"input">, "type" | 
 
 export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(function SearchInput({ block, className, placeholder, ...rest }, ref) {
   const t = useLocale();
+  const inField = useContext(InFieldContext);
   return (
-    <label className={cx("bt-search", className)} data-block={flag(block)}>
+    <span className={cx("bt-search", className)} data-block={flag(block)}>
       <Search size={14} />
-      <input ref={ref} type="search" placeholder={placeholder ?? t.search} aria-label={rest["aria-label"] ?? placeholder ?? t.search} {...rest} />
-    </label>
+      <BaseInput ref={ref} type="search" placeholder={placeholder ?? t.search} aria-label={rest["aria-label"] ?? (inField?.labelled ? undefined : placeholder ?? t.search)} {...rest} />
+    </span>
   );
 });
 
@@ -157,13 +195,16 @@ export type SwitchProps = {
   name?: string;
   /** Text beside the switch. */
   label?: ReactNode;
+  /** Quieter text under the label. */
+  hint?: ReactNode;
+  className?: string;
   /** Text inside the switch: the classic red/green labelled toggle. Use both or neither. */
   onLabel?: string;
   offLabel?: string;
   "aria-label"?: string;
 };
 
-export function Switch({ checked, defaultChecked, onChange, disabled, name, label, onLabel, offLabel, "aria-label": ariaLabel }: SwitchProps) {
+export function Switch({ checked, defaultChecked, onChange, disabled, name, label, hint, className, onLabel, offLabel, "aria-label": ariaLabel }: SwitchProps) {
   const id = useId();
   const labelled = onLabel !== undefined && offLabel !== undefined;
   const control = (
@@ -175,7 +216,7 @@ export function Switch({ checked, defaultChecked, onChange, disabled, name, labe
       onCheckedChange={(next) => onChange?.(next)}
       disabled={disabled}
       aria-label={ariaLabel}
-      className="bt-switch"
+      className={cx("bt-switch", !label && className)}
       data-labelled={flag(labelled)}
       render={(props, state) => (
         <span {...props}>
@@ -187,10 +228,12 @@ export function Switch({ checked, defaultChecked, onChange, disabled, name, labe
   );
   if (!label) return control;
   return (
-    <span className="bt-switch-wrap">
-      {control}
-      <label htmlFor={id}>{label}</label>
-    </span>
+    <FieldItem>
+      <span className={cx("bt-switch-wrap", className)}>
+        {control}
+        <label htmlFor={id} className="bt-check-text">{label}{hint ? <small>{hint}</small> : null}</label>
+      </span>
+    </FieldItem>
   );
 }
 
@@ -200,6 +243,7 @@ export type CheckboxProps = {
   indeterminate?: boolean;
   onChange?: (checked: boolean) => void;
   disabled?: boolean;
+  required?: boolean;
   name?: string;
   label?: ReactNode;
   /** Quieter text under the label. */
@@ -208,7 +252,7 @@ export type CheckboxProps = {
   "aria-label"?: string;
 };
 
-export function Checkbox({ checked, defaultChecked, indeterminate, onChange, disabled, name, label, hint, className, "aria-label": ariaLabel }: CheckboxProps) {
+export function Checkbox({ checked, defaultChecked, indeterminate, onChange, disabled, required, name, label, hint, className, "aria-label": ariaLabel }: CheckboxProps) {
   const control = (
     <BaseCheckbox.Root
       name={name}
@@ -217,6 +261,7 @@ export function Checkbox({ checked, defaultChecked, indeterminate, onChange, dis
       indeterminate={indeterminate}
       onCheckedChange={(next) => onChange?.(next)}
       disabled={disabled}
+      required={required}
       aria-label={ariaLabel}
       className={cx("bt-check", !label && className)}
     >
@@ -233,12 +278,18 @@ export function Checkbox({ checked, defaultChecked, indeterminate, onChange, dis
   );
   if (!label) return control;
   return (
-    <label className={cx("bt-check-wrap", className)}>
-      {control}
-      <span className="bt-check-text">
-        {label}
-        {hint ? <small>{hint}</small> : null}
-      </span>
-    </label>
+    <FieldItem>
+      <label className={cx("bt-check-wrap", className)}>
+        {control}
+        <span className="bt-check-text">
+          {label}
+          {hint ? <small>{hint}</small> : null}
+        </span>
+      </label>
+    </FieldItem>
   );
 }
+
+RadioGroup.btGroup = "always" as const;
+Checkbox.btGroup = "labelled" as const;
+Switch.btGroup = "labelled" as const;

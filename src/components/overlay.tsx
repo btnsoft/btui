@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useRef, useState, type CSSProperties, type ReactElement, type ReactNode, type RefObject } from "react";
 import { AlertDialog } from "@base-ui/react/alert-dialog";
 import { Dialog } from "@base-ui/react/dialog";
 import { Drawer as BaseDrawer } from "@base-ui/react/drawer";
@@ -16,6 +16,10 @@ export type ModalProps = {
   open: boolean;
   onClose: () => void;
   title: ReactNode;
+  /** Announced with the title when the window opens. */
+  description?: ReactNode;
+  /** Element that receives focus on open. By default the close button does. */
+  initialFocus?: RefObject<HTMLElement | null>;
   size?: keyof typeof MODAL_WIDTHS;
   footer?: ReactNode;
   /** `accent` fills the header with the brand colour. */
@@ -24,18 +28,21 @@ export type ModalProps = {
   className?: string;
 };
 
-export function Modal({ open, onClose, title, size = "md", footer, tone = "plain", children, className }: ModalProps) {
+export function Modal({ open, onClose, title, description, initialFocus, size = "md", footer, tone = "plain", children, className }: ModalProps) {
   const t = useLocale();
   return (
     <Dialog.Root open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
       <Dialog.Portal>
         <Dialog.Backdrop className="bt-scrim" />
-        <Dialog.Popup className={cx("bt-popup bt-modal", className)} data-tone={tone} style={{ "--bt-modal-width": `${MODAL_WIDTHS[size]}px` } as CSSProperties}>
+        <Dialog.Popup className={cx("bt-popup bt-modal", className)} initialFocus={initialFocus} data-tone={tone} style={{ "--bt-modal-width": `${MODAL_WIDTHS[size]}px` } as CSSProperties}>
           <div className="bt-modal-head">
             <Dialog.Title className="bt-modal-title">{title}</Dialog.Title>
             <Dialog.Close render={<IconButton label={t.close}><Close size={16} /></IconButton>} />
           </div>
-          <div className="bt-modal-body">{children}</div>
+          <div className="bt-modal-body">
+            {description ? <Dialog.Description className="bt-modal-desc">{description}</Dialog.Description> : null}
+            {children}
+          </div>
           {footer ? <div className="bt-modal-foot">{footer}</div> : null}
         </Dialog.Popup>
       </Dialog.Portal>

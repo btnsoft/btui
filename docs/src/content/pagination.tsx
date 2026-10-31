@@ -27,6 +27,11 @@ function ManyPages() {
   return <Pagination page={page} pageCount={48} onChange={setPage} />;
 }
 
+function Siblings() {
+  const [page, setPage] = useState(24);
+  return <Pagination page={page} pageCount={48} siblings={2} onChange={setPage} />;
+}
+
 function ClientList() {
   const t = useText();
   const lang = useLang();
@@ -80,21 +85,27 @@ export default definePage({
       { tr: "Tek sayfalık sonuçlar; bu durumda bileşeni hiç göstermeyin", en: "Single page results; do not show the component at all" },
     ],
   },
-  anatomy: `<Pagination page={3} pageCount={12} onChange={setPage} />
+  anatomy: `<Pagination page={3} pageCount={12} siblings={1} onChange={setPage} />
 
-‹  1  2  [3]  4  …  12  ›`,
+‹  1  2  [3]  4  5  …  12  ›`,
   examples: [
     {
       id: "few-pages",
       title: { tr: "Az sayfa", en: "Few pages" },
-      body: { tr: "Sayfa sayısı azsa aralık boşluğu oluşmaz. İlk sayfada önceki, son sayfada sonraki düğmesi kapanır.", en: "With few pages no gap appears. Previous turns off on the first page and next on the last." },
+      body: { tr: "Yedi ve daha az sayfada boşluk oluşmaz, tüm sayfalar görünür. İlk sayfada önceki, son sayfada sonraki düğmesi etkisizleşir ama odağı korur.", en: "With seven pages or fewer no gap appears and every page shows. Previous goes inactive on the first page and next on the last, but they keep focus." },
       example: { Demo: FewPages, code: `<Pagination page={page} pageCount={5} onChange={setPage} />` },
     },
     {
       id: "many-pages",
       title: { tr: "Çok sayfa", en: "Many pages" },
-      body: { tr: "Genişlik sayfa sayısından bağımsızdır: 48 sayfada da en çok yedi öğe görünür, bu yüzden dar alanlara da sığar.", en: "The width does not grow with the page count: 48 pages still show seven items at most, so it fits tight spaces too." },
+      body: { tr: "Liste uzunluğu sabittir: sayfa değişirken hep yedi öğe görünür, düğmeler yer değiştirmez ve aynı noktaya art arda basılabilir. 12 sayfada dizilim `1 2 3 4 5 … 12` ile başlar, ortada `1 … 5 6 7 … 12` olur, sonda `1 … 8 9 10 11 12` ile biter.", en: "The list keeps one length: seven items show as the page changes, so the buttons stay where they are and the same spot can be pressed again and again. With 12 pages it starts as `1 2 3 4 5 … 12`, turns into `1 … 5 6 7 … 12` in the middle and ends as `1 … 8 9 10 11 12`." },
       example: { Demo: ManyPages, code: `<Pagination page={page} pageCount={48} onChange={setPage} />` },
+    },
+    {
+      id: "siblings",
+      title: { tr: "Komşu sayfalar", en: "Sibling pages" },
+      body: { tr: "`siblings` geçerli sayfanın iki yanında kaç sayfa görüneceğini belirler. Varsayılan 1'dir ve yedi öğe verir; her artış listeye iki öğe ekler. Geniş sayfalarda 2 kullanışlıdır, dar alanlarda 0 verin.", en: "`siblings` sets how many pages show on each side of the current one. The default is 1, which gives seven items, and each step adds two. 2 suits wide pages, and 0 tight spaces." },
+      example: { Demo: Siblings, code: `<Pagination page={page} pageCount={48} siblings={2} onChange={setPage} />` },
     },
     {
       id: "client-list",
@@ -115,7 +126,7 @@ const rows = orders.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
     {
       id: "page-range",
       title: { tr: "pageRange ile kendi sayfalayıcınız", en: "Your own pager with pageRange" },
-      body: { tr: "`Pagination` komşu sayısını dışarı açmaz, hep bir komşu gösterir. Daha geniş bir dizilim gerekiyorsa `pageRange(page, pageCount, siblings)` işlevi aynı hesabı yapar: sayfa numaralarını ve boşluklar için `\"gap\"` değerini döndürür. Örneğin `pageRange(6, 12, 2)` sonucu `[1, \"gap\", 4, 5, 6, 7, 8, \"gap\", 12]` olur.", en: "`Pagination` does not expose its sibling count and always shows one. For a wider layout, `pageRange(page, pageCount, siblings)` does the same work: it returns the page numbers, with `\"gap\"` for each gap. For example, `pageRange(6, 12, 2)` gives `[1, \"gap\", 4, 5, 6, 7, 8, \"gap\", 12]`." },
+      body: { tr: "Görünümü tamamen kendiniz kurmak istiyorsanız `pageRange(page, pageCount, siblings)` işlevi `Pagination` ile aynı hesabı yapar: sayfa numaralarını ve boşluklar için `\"gap\"` değerini döndürür. Örneğin `pageRange(6, 12, 2)` sonucu `[1, \"gap\", 4, 5, 6, 7, 8, \"gap\", 12]` olur.", en: "To build the look entirely yourself, `pageRange(page, pageCount, siblings)` does the same work as `Pagination`: it returns the page numbers, with `\"gap\"` for each gap. For example, `pageRange(6, 12, 2)` gives `[1, \"gap\", 4, 5, 6, 7, 8, \"gap\", 12]`." },
       example: {
         Demo: Range,
         code: `{pageRange(page, pageCount, 2).map((p, i) => (
@@ -125,24 +136,28 @@ const rows = orders.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
     },
   ],
   a11y: [
+    { tr: "Bileşen bir `nav` öğesi çizer; adı dil dosyasındaki `pagination` metninden gelir.", en: "The component renders a `nav` element, named by the `pagination` text in the locale." },
     { tr: "Her sayfa gerçek bir `<button>` öğesidir; geçerli sayfa `aria-current=\"page\"` taşır.", en: "Each page is a real `<button>`, and the current page carries `aria-current=\"page\"`." },
     { tr: "Önceki ve sonraki düğmelerinin etiketi `BtuiProvider` dilinden gelir.", en: "The labels of previous and next come from the `BtuiProvider` language." },
-    { tr: "Bileşen `nav` öğesi çizmez. Sayfada birden çok liste varsa `<nav aria-label=\"Fatura sayfaları\">` ile sarın.", en: "The component renders no `nav` element. With several lists on a page, wrap it in `<nav aria-label=\"Invoice pages\">`." },
+    { tr: "Uçtaki düğmeler `disabled` yerine `aria-disabled` taşır. Böylece son sayfaya gelen klavye kullanıcısı odağı kaybetmez.", en: "Edge buttons use `aria-disabled` rather than `disabled`, so keyboard users who reach the last page keep their focus." },
+    { tr: "Liste uzunluğu sabit olduğu için düğmeler kaymaz.", en: "The list keeps one length, so the buttons never shift." },
     { tr: "Sayfa değişince odağı liste başlığına taşıyın; klavye kullanıcısı yeni içeriği böyle bulur.", en: "Move focus to the list heading after a page change, so keyboard users find the new content." },
   ],
   keyboard: [
-    ["Tab", { tr: "Düğmeler arasında gezer, kapalı düğmeleri atlar", en: "Moves between buttons, skipping disabled ones" }],
+    ["Tab", { tr: "Düğmeler arasında gezer; uçtaki etkisiz düğmeler sırada kalır", en: "Moves between buttons; inactive edge buttons stay in the order" }],
     ["Enter", { tr: "Sayfaya gider", en: "Goes to the page" }],
     ["Space", { tr: "Sayfaya gider", en: "Goes to the page" }],
   ],
   api: [
     {
       name: "Pagination",
-      description: { tr: "Denetimli bileşendir; sayfa durumunu siz tutarsınız. Yerel öznitelik ve `className` almaz.", en: "A controlled component: you keep the page state. It takes no native attributes or `className`." },
+      description: { tr: "Denetimli bileşendir; sayfa durumunu siz tutarsınız. Yerel öznitelik almaz.", en: "A controlled component: you keep the page state. It takes no native attributes." },
       props: [
         { name: "page", type: "number", required: true, description: { tr: "Geçerli sayfa, 1'den başlar", en: "Current page, starting at 1" } },
         { name: "pageCount", type: "number", required: true, description: { tr: "Toplam sayfa sayısı", en: "Total number of pages" } },
         { name: "onChange", type: "(page: number) => void", required: true, description: { tr: "Yeni sayfa numarasıyla çağrılır", en: "Called with the new page number" } },
+        { name: "siblings", type: "number", default: "1", description: { tr: "Geçerli sayfanın iki yanında gösterilecek sayfa sayısı", en: "Pages to show on each side of the current one" } },
+        { name: "className", type: "string", description: { tr: "`nav` öğesine eklenen sınıf", en: "Class added to the `nav` element" } },
       ],
     },
     {
@@ -157,6 +172,7 @@ const rows = orders.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   ],
   styling: [
     { name: "data-active", kind: "data", description: { tr: "Geçerli sayfanın `.bt-page` düğmesinde bulunur", en: "On the `.bt-page` button of the current page" } },
+    { name: "data-off", kind: "data", description: { tr: "Uçtaki etkisiz düğmede bulunur", en: "On an inactive edge button" } },
     { name: "--bt-accent-strong", kind: "var", description: { tr: "Geçerli sayfa zemini", en: "Current page background" } },
     { name: "--bt-on-accent", kind: "var", description: { tr: "Geçerli sayfa metni", en: "Current page text" } },
     { name: "--bt-faint", kind: "var", description: { tr: "Üç nokta rengi", en: "Ellipsis colour" } },

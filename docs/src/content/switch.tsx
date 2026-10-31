@@ -63,7 +63,17 @@ function WithHint() {
   const t = useText();
   return (
     <div className="d-stack">
-      <Field hint={t({ tr: "Açıkken 50.000 TL üzeri siparişler yöneticiye gider", en: "When on, orders above 50,000 TRY go to a manager" })}>
+      <Switch defaultChecked label={t({ tr: "Yönetici onayı iste", en: "Require manager approval" })} hint={t({ tr: "Açıkken 50.000 TL üzeri siparişler yöneticiye gider", en: "When on, orders above 50,000 TRY go to a manager" })} />
+      <Switch label={t({ tr: "Kısmi sevkiyata izin ver", en: "Allow partial shipments" })} hint={t({ tr: "Eksik kalemler sonraki sevkiyatla gider", en: "Missing lines go with the next shipment" })} />
+    </div>
+  );
+}
+
+function InField() {
+  const t = useText();
+  return (
+    <div className="d-stack">
+      <Field label={t({ tr: "Onay akışı", en: "Approval flow" })} hint={t({ tr: "Değişiklik yeni siparişlere uygulanır", en: "The change applies to new orders" })}>
         <Switch defaultChecked label={t({ tr: "Yönetici onayı iste", en: "Require manager approval" })} />
       </Field>
     </div>
@@ -149,10 +159,20 @@ export default definePage({
     {
       id: "hint",
       title: { tr: "Açıklamalı", en: "With a hint" },
-      body: { tr: "Bileşenin `hint` propu yoktur. `Field` içine alın ve yalnız `hint` verin; `Field` üzerinde `label` kullanmayın, yoksa anahtarın adı alan etiketi olur.", en: "The component has no `hint` prop. Wrap it in `Field` and pass only `hint`; leave out `label` on `Field`, or the switch is named by the field label." },
+      body: { tr: "`hint` etiketin altına soluk bir açıklama yazar ve tıklanabilir alanın içinde kalır. Yalnız `label` ile birlikte görünür.", en: "`hint` adds quieter text under the label and stays inside the clickable area. It only shows together with `label`." },
       example: {
         Demo: WithHint,
-        code: `<Field hint="When on, orders above 50,000 TRY go to a manager">
+        code: `<Switch defaultChecked label="Require manager approval" hint="When on, orders above 50,000 TRY go to a manager" />
+<Switch label="Allow partial shipments" hint="Missing lines go with the next shipment" />`,
+      },
+    },
+    {
+      id: "in-field",
+      title: { tr: "Field içinde", en: "Inside Field" },
+      body: { tr: "`Field` üzerindeki `label` anahtarın üstünde başlık olur, anahtar kendi `label` metniyle okunur. `Switch` `Field` öğesinin doğrudan çocuğu olmalıdır.", en: "The `label` on `Field` sits above as a caption, and the switch is read by its own `label`. `Switch` must be a direct child of `Field`." },
+      example: {
+        Demo: InField,
+        code: `<Field label="Approval flow" hint="The change applies to new orders">
   <Switch defaultChecked label="Require manager approval" />
 </Field>`,
       },
@@ -190,10 +210,12 @@ export default definePage({
         { name: "defaultChecked", type: "boolean", default: "false", description: { tr: "Denetimsiz başlangıç durumu", en: "Uncontrolled initial state" } },
         { name: "onChange", type: "(checked: boolean) => void", description: { tr: "Yeni durumu bildirir", en: "Reports the new state" } },
         { name: "label", type: "ReactNode", description: { tr: "Anahtarın yanındaki metin", en: "Text beside the switch" } },
+        { name: "hint", type: "ReactNode", description: { tr: "Etiketin altında soluk açıklama. `label` ile birlikte görünür", en: "Quieter text under the label. Shown together with `label`" } },
         { name: "onLabel", type: "string", description: { tr: "Açıkken içeride yazan metin; `offLabel` ile birlikte verin", en: "Text inside while on; pass it with `offLabel`" } },
         { name: "offLabel", type: "string", description: { tr: "Kapalıyken içeride yazan metin; `onLabel` ile birlikte verin", en: "Text inside while off; pass it with `onLabel`" } },
         { name: "disabled", type: "boolean", default: "false", description: { tr: "Anahtarı kapatır", en: "Turns the switch off" } },
         { name: "name", type: "string", description: { tr: "Form gönderiminde kullanılan ad", en: "Name used on form submission" } },
+        { name: "className", type: "string", description: { tr: "`label` verildiğinde dış öğeye eklenir; `label` yoksa uygulanmaz", en: "Added to the outer element when `label` is set; ignored without `label`" } },
         { name: "aria-label", type: "string", description: { tr: "`label` yoksa erişilebilir ad", en: "Accessible name when there is no `label`" } },
       ],
     },

@@ -67,7 +67,23 @@ export function Loading({ children }: { children?: ReactNode }) {
   );
 }
 
-export function EmptyState({ children }: { children?: ReactNode }) {
+export type EmptyStateProps = {
+  icon?: ReactNode;
+  /** Bold line above the message. */
+  title?: ReactNode;
+  children?: ReactNode;
+  /** The next step, usually a Button. */
+  action?: ReactNode;
+};
+
+export function EmptyState({ icon, title, children, action }: EmptyStateProps) {
   const t = useLocale();
-  return <div className="bt-empty">{children ?? t.empty}</div>;
+  return (
+    <div className="bt-empty">
+      {icon ? <div className="bt-empty-icon">{icon}</div> : null}
+      {title ? <b className="bt-empty-title">{title}</b> : null}
+      <div>{children ?? (title ? null : t.empty)}</div>
+      {action ? <div className="bt-empty-action">{action}</div> : null}
+    </div>
+  );
 }

@@ -1,11 +1,9 @@
 import { useState } from "react";
-import { IconFileInvoice, IconPlus, IconSearchOff } from "@tabler/icons-react";
+import { IconChecklist, IconFileInvoice, IconPlus, IconSearchOff } from "@tabler/icons-react";
 import { Button, Card, DataTable, EmptyState, SearchInput, type Column } from "btui";
 import { CUSTOMERS } from "../lib/data";
 import { useText } from "../lib/i18n";
 import { definePage } from "../lib/schema";
-
-const CENTERED = { display: "grid", justifyItems: "center", gap: 10 } as const;
 
 function Default() {
   return (
@@ -20,12 +18,12 @@ function FirstUse() {
   return (
     <div style={{ width: "100%", maxWidth: 460 }}>
       <Card title={t({ tr: "Faturalar", en: "Invoices" })}>
-        <EmptyState>
-          <div style={CENTERED}>
-            <IconFileInvoice size={28} />
-            {t({ tr: "Henüz fatura kesilmedi. İlk faturanız burada görünecek.", en: "No invoices yet. Your first one will show up here." })}
-            <Button variant="primary" icon={<IconPlus size={15} />}>{t({ tr: "Fatura oluştur", en: "Create invoice" })}</Button>
-          </div>
+        <EmptyState
+          icon={<IconFileInvoice size={20} />}
+          title={t({ tr: "Henüz fatura kesilmedi", en: "No invoices yet" })}
+          action={<Button variant="primary" icon={<IconPlus size={15} />}>{t({ tr: "Fatura oluştur", en: "Create invoice" })}</Button>}
+        >
+          {t({ tr: "İlk faturanız burada görünecek.", en: "Your first one will show up here." })}
         </EmptyState>
       </Card>
     </div>
@@ -43,6 +41,17 @@ function Message() {
   );
 }
 
+function TitleOnly() {
+  const t = useText();
+  return (
+    <div style={{ width: "100%", maxWidth: 420 }}>
+      <Card title={t({ tr: "Bekleyen işler", en: "Pending work" })}>
+        <EmptyState icon={<IconChecklist size={20} />} title={t({ tr: "Her şey tamam", en: "All done" })} />
+      </Card>
+    </div>
+  );
+}
+
 function SearchResult() {
   const t = useText();
   const [query, setQuery] = useState("Zümrüt");
@@ -55,12 +64,12 @@ function SearchResult() {
           <ul style={{ margin: 0, padding: "8px 16px", listStyle: "none" }}>{rows.map((c) => <li key={c} style={{ padding: "4px 0" }}>{c}</li>)}</ul>
         ) : (
           <div role="status">
-            <EmptyState>
-              <div style={CENTERED}>
-                <IconSearchOff size={24} />
-                {t({ tr: `"${query}" için müşteri bulunamadı.`, en: `No customers found for "${query}".` })}
-                <Button size="sm" onClick={() => setQuery("")}>{t({ tr: "Aramayı temizle", en: "Clear search" })}</Button>
-              </div>
+            <EmptyState
+              icon={<IconSearchOff size={20} />}
+              title={t({ tr: "Sonuç yok", en: "No results" })}
+              action={<Button size="sm" onClick={() => setQuery("")}>{t({ tr: "Aramayı temizle", en: "Clear search" })}</Button>}
+            >
+              {t({ tr: `"${query}" için müşteri bulunamadı.`, en: `No customers found for "${query}".` })}
             </EmptyState>
           </div>
         )}
@@ -84,12 +93,12 @@ export default definePage({
   hero: {
     Demo: FirstUse,
     code: `<Card title="Invoices">
-  <EmptyState>
-    <div style={{ display: "grid", justifyItems: "center", gap: 10 }}>
-      <IconFileInvoice size={28} />
-      No invoices yet. Your first one will show up here.
-      <Button variant="primary" icon={<IconPlus size={15} />}>Create invoice</Button>
-    </div>
+  <EmptyState
+    icon={<IconFileInvoice size={20} />}
+    title="No invoices yet"
+    action={<Button variant="primary" icon={<IconPlus size={15} />}>Create invoice</Button>}
+  >
+    Your first one will show up here.
   </EmptyState>
 </Card>`,
   },
@@ -105,11 +114,14 @@ export default definePage({
       { tr: "`DataTable` içinde; tablonun `empty` prop'u aynı çerçeveyi zaten çizer", en: "Inside `DataTable`; its `empty` prop already draws the same frame" },
     ],
   },
+  anatomy: `<EmptyState icon={<Icon />} title="Title" action={<Button />}>
+  Message
+</EmptyState>`,
   examples: [
     {
       id: "default",
       title: { tr: "Varsayılan metin", en: "Default text" },
-      body: { tr: "`children` verilmezse `BtuiProvider` dilindeki `empty` metni gösterilir. Hızlı bir başlangıçtır ama çoğu ekranda daha açıklayıcı bir cümle gerekir.", en: "Without `children`, the `empty` text from the `BtuiProvider` language shows. It is a quick start, but most screens deserve a more helpful sentence." },
+      body: { tr: "`children` ve `title` verilmezse `BtuiProvider` dilindeki `empty` metni gösterilir. Hızlı bir başlangıçtır ama çoğu ekranda daha açıklayıcı bir cümle gerekir.", en: "Without `children` and `title`, the `empty` text from the `BtuiProvider` language shows. It is a quick start, but most screens deserve a more helpful sentence." },
       example: { Demo: Default, code: `<EmptyState />` },
     },
     {
@@ -119,19 +131,25 @@ export default definePage({
       example: { Demo: Message, code: `<EmptyState>No requests are waiting for your approval.</EmptyState>` },
     },
     {
+      id: "icon-title",
+      title: { tr: "İkon ve başlık", en: "Icon and title" },
+      body: { tr: "`icon` üstte kare bir zemin içinde durur, `title` kalın satır olur. Söylenecek başka şey yoksa `children` vermeyin; `title` tek başına yeter ve varsayılan metin görünmez.", en: "`icon` sits on a square background at the top and `title` is the bold line. With nothing else to say, leave out `children`; `title` is enough on its own and the default text stays away." },
+      example: { Demo: TitleOnly, code: `<EmptyState icon={<IconChecklist size={20} />} title="All done" />` },
+    },
+    {
       id: "search",
       title: { tr: "Arama sonucu yok", en: "No search results" },
-      body: { tr: "Aramayı değiştirmek için tek tıkla çıkış verin. Sonuç değişimini duyurmak için bileşeni `role=\"status\"` taşıyan bir öğe içine alın; `EmptyState` kendisi duyuru yapmaz. Kutuyu temizleyip listeye dönmeyi deneyin.", en: "Offer a one click way out of the search. Wrap the component in an element with `role=\"status\"` to announce the change; `EmptyState` announces nothing itself. Clear the box to get back to the list." },
+      body: { tr: "`action` sıradaki adımı gösterir: aramayı değiştirmek için tek tıkla çıkış verin. Sonuç değişimini duyurmak için bileşeni `role=\"status\"` taşıyan bir öğe içine alın; `EmptyState` kendisi duyuru yapmaz. Kutuyu temizleyip listeye dönmeyi deneyin.", en: "`action` shows the next step, so offer a one click way out of the search. Wrap the component in an element with `role=\"status\"` to announce the change; `EmptyState` announces nothing itself. Clear the box to get back to the list." },
       example: {
         Demo: SearchResult,
         code: `{rows.length === 0 ? (
   <div role="status">
-    <EmptyState>
-      <div style={{ display: "grid", justifyItems: "center", gap: 10 }}>
-        <IconSearchOff size={24} />
-        No customers found for "{query}".
-        <Button size="sm" onClick={() => setQuery("")}>Clear search</Button>
-      </div>
+    <EmptyState
+      icon={<IconSearchOff size={20} />}
+      title="No results"
+      action={<Button size="sm" onClick={() => setQuery("")}>Clear search</Button>}
+    >
+      No customers found for "{query}".
     </EmptyState>
   </div>
 ) : <CustomerList rows={rows} />}`,
@@ -156,14 +174,19 @@ export default definePage({
   api: [
     {
       name: "EmptyState",
-      description: { tr: "Yalnız `children` alır. `title`, `icon` ya da `action` prop'u yoktur, hepsini `children` içinde kurun.", en: "Takes `children` only. There is no `title`, `icon` or `action` prop, so build them inside `children`." },
+      description: { tr: "Yerel öznitelikler iletilmez; yalnız aşağıdaki prop'lar geçerlidir.", en: "Native attributes are not forwarded; only the props below apply." },
       props: [
-        { name: "children", type: "ReactNode", default: "locale.empty", description: { tr: "Gösterilecek içerik", en: "Content to show" } },
+        { name: "icon", type: "ReactNode", description: { tr: "Üstte kare zemin içinde gösterilir", en: "Shown on a square background at the top" } },
+        { name: "title", type: "ReactNode", description: { tr: "İletinin üstündeki kalın satır", en: "Bold line above the message" } },
+        { name: "children", type: "ReactNode", default: "locale.empty", description: { tr: "İleti; `title` varsa varsayılan metin gösterilmez", en: "The message; with `title`, the default text does not show" } },
+        { name: "action", type: "ReactNode", description: { tr: "Sıradaki adım, genelde bir `Button`", en: "The next step, usually a `Button`" } },
       ],
     },
   ],
   styling: [
     { name: "--bt-muted", kind: "var", description: { tr: "Metin rengi", en: "Text colour" } },
+    { name: "--bt-text", kind: "var", description: { tr: "Başlık rengi", en: "Title colour" } },
+    { name: "--bt-neutral-soft", kind: "var", description: { tr: "İkon zemini", en: "Icon background" } },
   ],
   related: ["data-table", "card", "alert", "skeleton"],
 });

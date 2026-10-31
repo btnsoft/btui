@@ -452,7 +452,7 @@ function Server() {
 }
 
 export default definePage({
-  summary: { tr: "Sıralama, sayfalama, seçim, ayrıntı satırı ve sunucu verisini tek bileşende toplar. İş uygulamalarındaki liste ekranlarının çoğu bununla kurulur.", en: "Sorting, paging, selection, detail rows and server data in a single component. Most list screens in a business app are built on it." },
+  summary: { tr: "Sıralama, sayfalama, seçim, ayrıntı satırı ve sunucu verisini tek bileşende toplar. İş uygulamalarındaki liste ekranlarının çoğu bununla kurulur. Filtre, gruplama, Excel, düzenleme ve 100 bin satır için Gelişmiş ızgara sayfasına bakın.", en: "Sorting, paging, selection, detail rows and server data in a single component. Most list screens in a business app are built on it. See Advanced grid for filters, grouping, Excel, editing and 100k rows." },
   imports: 'import { DataTable, type Column } from "btui";',
   hero: {
     Demo: Hero,
@@ -860,13 +860,13 @@ function OrdersTable() {
         { name: "actions", type: "ReactNode", description: { tr: "Bandın sağındaki eylemler", en: "Actions on the right of the band" } },
         { name: "bandTone", type: '"plain" | "accent"', default: '"plain"', description: { tr: "`accent` bandı marka rengiyle doldurur", en: "`accent` fills the band with the brand colour" } },
         { name: "controls", type: "boolean", description: { tr: "Sütun ve yoğunluk düğmeleri. Verilmezse bant içeriği varken açılır", en: "Column and density buttons. When omitted, on whenever the band has content" } },
-        { name: "storageKey", type: "string", description: { tr: "Gizli sütunları ve yoğunluğu saklayan `localStorage` anahtarı", en: "`localStorage` key that keeps hidden columns and density" } },
+        { name: "storageKey", type: "string", description: { tr: "Sütunları, genişlikleri, sıralamayı, filtreleri ve yoğunluğu saklayan `localStorage` anahtarı", en: "`localStorage` key that keeps columns, widths, sort, filters and density" } },
         { name: "pageSize", type: "number", description: { tr: "Sayfa başına satır. Verilmezse tablo sayfalanmaz; sunucu kipinde `rows.length` sayılır", en: "Rows per page. When omitted there is no paging; in server mode `rows.length` is used" } },
         { name: "defaultDensity", type: '"comfortable" | "compact"', default: '"comfortable"', description: { tr: "Başlangıç yoğunluğu. `storageKey` altındaki kayıt önceliklidir", en: "Starting density. A value saved under `storageKey` wins" } },
         { name: "server", type: "{ total: number; page: number; onPageChange: (page: number) => void }", description: { tr: "Sunucu kipi. `rows` geçerli sayfa olur, sıralama uygulanmaz", en: "Server mode. `rows` becomes the current page and sorting is not applied" } },
         { name: "sort", type: "SortState | null", description: { tr: "Denetimli sıralama. `null` sırasız demektir", en: "Controlled sort. `null` means unsorted" } },
         { name: "defaultSort", type: "SortState | null", default: "null", description: { tr: "Başlangıç sıralaması", en: "Initial sort" } },
-        { name: "onSortChange", type: "(sort: SortState | null) => void", description: { tr: "Sıralama değişince çağrılır. Sunucu kipinde başlıkların sıralanması için gereklidir", en: "Called when the sort changes. Required for sortable headers in server mode" } },
+        { name: "onSortChange", type: "(sort: SortState | null, all: SortState[]) => void", description: { tr: "Sıralama değişince çağrılır. İkinci değer Shift ile eklenen tüm seviyeleri tutar. Sunucu kipinde başlıkların sıralanması için gereklidir", en: "Called when the sort changes. The second value holds every level added with Shift. Required for sortable headers in server mode" } },
         { name: "loading", type: "boolean", default: "false", description: { tr: "Satır yoksa gösterge çizer, varsa satırları soluklaştırır", en: "Shows a spinner with no rows, fades existing rows otherwise" } },
         { name: "empty", type: "ReactNode", default: "locale.empty", description: { tr: "Boş durum içeriği", en: "Empty state content" } },
         { name: "onRowClick", type: "(row: T) => void", description: { tr: "Satırı tıklanabilir ve odaklanabilir yapar", en: "Makes rows clickable and focusable" } },
@@ -931,5 +931,5 @@ function OrdersTable() {
     { name: "--bt-line", kind: "var", description: { tr: "Satır ayırıcı çizgi", en: "Row separator" } },
     { name: "--bt-accent", kind: "var", description: { tr: "Vurgulu bant zemini ve sıralama işareti", en: "Accent band background and sort mark" } },
   ],
-  related: ["pagination", "chip", "filter-bar", "empty-state", "drawer", "confirm"],
+  related: ["data-grid", "pagination", "chip", "filter-bar", "empty-state", "drawer", "confirm"],
 });

@@ -1,6 +1,6 @@
 {
   "name": "btui",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Sharp, dense React components for business software. Built on Base UI.",
   "license": "MIT",
   "type": "module",

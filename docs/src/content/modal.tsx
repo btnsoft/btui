@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { Alert, Badge, Button, Field, InfoRow, Input, Modal, Select, useConfirm, useToast } from "btui";
 import { CITIES, ORDERS, STATUS_LABEL, STATUS_TONE, money } from "../lib/data";
 import { useLang, useText } from "../lib/i18n";
@@ -90,6 +90,66 @@ function NewCustomer() {
           </Field>
           <Field label={t({ tr: "Şehir", en: "City" })}>
             <Select value={city} onChange={setCity} options={CITIES} block />
+          </Field>
+        </form>
+      </Modal>
+    </>
+  );
+}
+
+function Described() {
+  const t = useText();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>{t({ tr: "Faturayı iptal et", en: "Cancel the invoice" })}</Button>
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        size="sm"
+        title={t({ tr: "Fatura iptali", en: "Invoice cancellation" })}
+        description={t({ tr: "İptal edilen fatura için müşteriye bilgilendirme gönderilir.", en: "The customer is notified about a cancelled invoice." })}
+        footer={
+          <>
+            <Button onClick={() => setOpen(false)}>{t({ tr: "Vazgeç", en: "Cancel" })}</Button>
+            <Button variant="danger" onClick={() => setOpen(false)}>{t({ tr: "Faturayı iptal et", en: "Cancel the invoice" })}</Button>
+          </>
+        }
+      >
+        <InfoRow label={t({ tr: "Fatura", en: "Invoice" })}>FT-2026-0412</InfoRow>
+        <InfoRow label={t({ tr: "Müşteri", en: "Customer" })}>Ege Tekstil</InfoRow>
+      </Modal>
+    </>
+  );
+}
+
+function FirstInput() {
+  const t = useText();
+  const [open, setOpen] = useState(false);
+  const first = useRef<HTMLInputElement>(null);
+  const close = () => setOpen(false);
+  return (
+    <>
+      <Button variant="primary" onClick={() => setOpen(true)}>{t({ tr: "Tahsilat gir", en: "Enter a payment" })}</Button>
+      <Modal
+        open={open}
+        onClose={close}
+        size="sm"
+        title={t({ tr: "Tahsilat", en: "Payment" })}
+        initialFocus={first}
+        footer={
+          <>
+            <Button onClick={close}>{t({ tr: "Vazgeç", en: "Cancel" })}</Button>
+            <Button variant="primary" type="submit" form="new-payment">{t({ tr: "Kaydet", en: "Save" })}</Button>
+          </>
+        }
+      >
+        <form id="new-payment" onSubmit={(e) => { e.preventDefault(); close(); }} style={{ display: "grid", gap: 12 }}>
+          <Field label={t({ tr: "Makbuz no", en: "Receipt no" })}>
+            <Input ref={first} />
+          </Field>
+          <Field label={t({ tr: "Açıklama", en: "Note" })}>
+            <Input />
           </Field>
         </form>
       </Modal>
@@ -234,7 +294,16 @@ export default definePage({
       { tr: "Uzun, çok bölümlü formlar; bunlar kendi sayfasını hak eder", en: "Long forms with many sections; they deserve their own page" },
     ],
   },
-  anatomy: `<Modal open={open} onClose={close} title="Title" size="md" tone="plain" footer={<Button />}>
+  anatomy: `<Modal
+  open={open}
+  onClose={close}
+  title="Title"
+  description="Short explanation"
+  initialFocus={ref}
+  size="md"
+  tone="plain"
+  footer={<Button />}
+>
   Content
 </Modal>`,
   examples: [
@@ -276,6 +345,43 @@ export default definePage({
       <Select value={city} onChange={setCity} options={CITIES} block />
     </Field>
   </form>
+</Modal>`,
+      },
+    },
+    {
+      id: "description",
+      title: { tr: "Açıklama", en: "Description" },
+      body: { tr: "`description` gövdenin başında kısa bir metin gösterir ve diyaloğa `aria-describedby` ile bağlanır; ekran okuyucu açılışta başlıkla birlikte okur. Bir iki cümleyi aşan bilgi gövdeye gider.", en: "`description` shows a short text at the top of the body and links to the dialog through `aria-describedby`, so screen readers read it with the title on open. Anything beyond a sentence or two belongs in the body." },
+      example: {
+        Demo: Described,
+        code: `<Modal
+  open={open}
+  onClose={close}
+  size="sm"
+  title="Invoice cancellation"
+  description="The customer is notified about a cancelled invoice."
+  footer={<Button variant="danger" onClick={cancelInvoice}>Cancel the invoice</Button>}
+>
+  <InfoRow label="Invoice">FT-2026-0412</InfoRow>
+  <InfoRow label="Customer">Ege Tekstil</InfoRow>
+</Modal>`,
+      },
+    },
+    {
+      id: "initial-focus",
+      title: { tr: "İlk odak", en: "Initial focus" },
+      body: { tr: "Varsayılan olarak odak başlıktaki kapatma düğmesine gelir. Formlarda `initialFocus` ile ilk alana ref verin, kullanıcı hemen yazmaya başlasın. Diyaloğu açıp yazmayı deneyin.", en: "By default focus lands on the close button in the header. In forms, pass a ref to the first field through `initialFocus`, so people can start typing at once. Open the dialog and start typing." },
+      example: {
+        Demo: FirstInput,
+        code: `const first = useRef<HTMLInputElement>(null);
+
+<Modal open={open} onClose={close} size="sm" title="Payment" initialFocus={first}>
+  <Field label="Receipt no">
+    <Input ref={first} />
+  </Field>
+  <Field label="Note">
+    <Input />
+  </Field>
 </Modal>`,
       },
     },
@@ -364,9 +470,9 @@ const close = async () => {
     },
   ],
   a11y: [
-    { tr: "`role=\"dialog\"` taşır ve `title` diyaloğun adı olarak bağlanır. Başlığı her zaman anlamlı yazın.", en: "It carries `role=\"dialog\"` and `title` is tied in as the dialog name, so always write a meaningful title." },
+    { tr: "`role=\"dialog\"` taşır ve `title` diyaloğun adı olarak bağlanır. Başlığı her zaman anlamlı yazın. `description` verilirse `aria-describedby` ile bağlanır.", en: "It carries `role=\"dialog\"` and `title` is tied in as the dialog name, so always write a meaningful title. `description` links through `aria-describedby` when given." },
     { tr: "Açıkken odak içeride döner, arkadaki sayfa etkileşime kapanır ve kaydırılmaz.", en: "While open, focus cycles inside, and the page behind is blocked from interaction and scrolling." },
-    { tr: "Açılınca odak ilk odaklanabilir öğeye gelir. Bu öğe başlıktaki kapatma düğmesidir.", en: "On open, focus lands on the first focusable element, which is the close button in the header." },
+    { tr: "Açılınca odak `initialFocus` ile verilen öğeye gelir. Verilmezse başlıktaki kapatma düğmesine gelir.", en: "On open, focus lands on the element given through `initialFocus`, or else on the close button in the header." },
     { tr: "Kapanınca odak diyaloğu açan öğeye döner.", en: "When it closes, focus returns to the element that opened it." },
     { tr: "Kapatma düğmesinin adı `BtuiProvider` dilinden gelir.", en: "The name of the close button comes from the `BtuiProvider` locale." },
   ],
@@ -382,6 +488,8 @@ const close = async () => {
         { name: "open", type: "boolean", required: true, description: { tr: "Diyalog açık mı", en: "Whether the dialog is open" } },
         { name: "onClose", type: "() => void", required: true, description: { tr: "Kapatma düğmesi, `Esc` ya da arka plan tıklamasında çalışır", en: "Runs on the close button, `Esc` or a backdrop click" } },
         { name: "title", type: "ReactNode", required: true, description: { tr: "Başlık; tek satırdır, sığmazsa kesilir", en: "Title; a single line that truncates when it does not fit" } },
+        { name: "description", type: "ReactNode", description: { tr: "Gövdenin başındaki kısa metin; açılışta başlıkla birlikte okunur", en: "Short text at the top of the body; read along with the title on open" } },
+        { name: "initialFocus", type: "RefObject<HTMLElement | null>", description: { tr: "Açılışta odak alacak öğe; verilmezse kapatma düğmesi odaklanır", en: "Element that receives focus on open; by default the close button does" } },
         { name: "size", type: '"sm" | "md" | "lg" | "xl"', default: '"md"', description: { tr: "En büyük genişlik: 440, 640, 880, 1120px", en: "Largest width: 440, 640, 880, 1120px" } },
         { name: "footer", type: "ReactNode", description: { tr: "Sağa hizalı alt şerit, genelde düğmeler", en: "Right-aligned bottom strip, usually buttons" } },
         { name: "tone", type: '"plain" | "accent"', default: '"plain"', description: { tr: "`accent` başlık şeridini marka rengiyle doldurur", en: "`accent` fills the header with the brand colour" } },

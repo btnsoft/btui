@@ -1,8 +1,8 @@
 import type { ComponentType } from "react";
 import {
-  IconAlertCircle, IconAlertTriangle, IconAppWindow, IconArrowsMoveVertical, IconBadge, IconBell, IconBook, IconBox, IconBrush, IconBulb, IconCalculator, IconCards, IconCheckbox, IconChevronsRight,
+  IconAlertCircle, IconAlertTriangle, IconAppWindow, IconArrowsMoveVertical, IconBadge, IconBell, IconBook, IconBox, IconBrush, IconBulb, IconCalculator, IconCalendar, IconCalendarEvent, IconCalendarMonth, IconCards, IconCheckbox, IconChevronsRight,
   IconCircleDot, IconClick, IconColumns3, IconDots, IconDownload, IconFileUpload, IconFilter, IconForms, IconHeading, IconId, IconKeyboard, IconLanguage, IconLayoutNavbar, IconLayoutSidebar,
-  IconLayoutSidebarRight, IconList, IconListCheck, IconLoader2, IconMessage, IconMoodEmpty, IconNumbers, IconPageBreak, IconPencil, IconPointFilled, IconProgress, IconSearch, IconSelect, IconSquares, IconTable, IconTag, IconTextSize, IconToggleLeft, IconUser, IconWindowMaximize,
+  IconLayoutSidebarRight, IconList, IconListCheck, IconLoader2, IconMessage, IconMoodEmpty, IconNumbers, IconPageBreak, IconPencil, IconPointFilled, IconProgress, IconSearch, IconSelect, IconSquares, IconTable, IconTableOptions, IconTag, IconTextSize, IconToggleLeft, IconUser, IconWindowMaximize,
 } from "@tabler/icons-react";
 import type { Text } from "./i18n";
 
@@ -42,6 +42,9 @@ export const NAV: NavSection[] = [
       { id: "checkbox", title: "Checkbox", icon: IconCheckbox },
       { id: "radio-group", title: "RadioGroup", icon: IconCircleDot },
       { id: "switch", title: "Switch", icon: IconToggleLeft },
+      { id: "date-picker", title: "DatePicker", icon: IconCalendar },
+      { id: "date-range-picker", title: "DateRangePicker", icon: IconCalendarMonth },
+      { id: "calendar", title: "Calendar", icon: IconCalendarEvent },
       { id: "file-dropzone", title: "FileDropzone", icon: IconFileUpload },
     ],
   },
@@ -49,6 +52,7 @@ export const NAV: NavSection[] = [
     title: { tr: "Veri", en: "Data" },
     pages: [
       { id: "data-table", title: "DataTable", icon: IconTable },
+      { id: "data-grid", title: { tr: "Gelişmiş ızgara", en: "Advanced grid" }, icon: IconTableOptions },
       { id: "pagination", title: "Pagination", icon: IconPageBreak },
       { id: "card", title: "Card", icon: IconBox },
       { id: "kpi", title: "Kpi", icon: IconNumbers },

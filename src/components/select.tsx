@@ -34,6 +34,7 @@ export type SelectProps = SharedProps & {
   searchable?: boolean;
   /** Clear button. Clearing reports an empty string. */
   clearable?: boolean;
+  required?: boolean;
   name?: string;
 };
 
@@ -74,7 +75,7 @@ function SearchRow({ placeholder }: { placeholder: string }) {
 }
 
 export function Select({
-  value, onChange, options, placeholder, label, variant = "field", size = "md", searchable, clearable, disabled, block, name, className, "aria-label": ariaLabel,
+  value, onChange, options, placeholder, label, variant = "field", size = "md", searchable, clearable, disabled, required, block, name, className, "aria-label": ariaLabel,
 }: SelectProps) {
   const t = useLocale();
   const filter = useFilter();
@@ -101,6 +102,7 @@ export function Select({
           isItemEqualToValue={(a, b) => a.value === b.value}
           filter={filter}
           disabled={disabled}
+          required={required}
           name={name}
         >
           <Combobox.Trigger {...shared}>{content}</Combobox.Trigger>
@@ -126,6 +128,7 @@ export function Select({
           value={selected ? selected.value : null}
           onValueChange={(next) => onChange(next ?? "")}
           disabled={disabled}
+          required={required}
           name={name}
         >
           <BaseSelect.Trigger {...shared}>{content}</BaseSelect.Trigger>

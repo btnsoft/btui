@@ -100,7 +100,7 @@ export default definePage({
     ],
   },
   anatomy: `<Field label="Label">
-  <NumberInput value={value} onChange={setValue} min={0} max={100} step={1} />
+  <NumberInput value={value} onChange={setValue} min={0} max={100} step={1} required name="fieldName" />
 </Field>`,
   examples: [
     {
@@ -162,7 +162,7 @@ const total = (quantity ?? 0) * 1450;
   api: [
     {
       name: "NumberInput",
-      description: { tr: "Yerel öznitelikler iletilmez; yalnız aşağıdaki proplar geçerlidir. Ref ve `className` desteklenmez.", en: "Native attributes are not forwarded; only the props below apply. The ref and `className` are not supported." },
+      description: { tr: "Yerel öznitelikler ve ref iletilmez; yalnız aşağıdaki proplar geçerlidir.", en: "Native attributes and the ref are not forwarded; only the props below apply." },
       props: [
         { name: "value", type: "number | null", description: { tr: "Denetimli değer", en: "Controlled value" } },
         { name: "defaultValue", type: "number", description: { tr: "Denetimsiz başlangıç değeri", en: "Uncontrolled initial value" } },
@@ -173,7 +173,9 @@ const total = (quantity ?? 0) * 1450;
         { name: "format", type: "Intl.NumberFormatOptions", description: { tr: "Görüntü biçimi; dil `BtuiProvider` üzerinden gelir", en: "Display format; the language comes from `BtuiProvider`" } },
         { name: "hideSteppers", type: "boolean", default: "false", description: { tr: "Eksi ve artı düğmelerini gizler", en: "Hides the minus and plus buttons" } },
         { name: "disabled", type: "boolean", default: "false", description: { tr: "Alanı ve düğmeleri kapatır", en: "Turns off the field and its buttons" } },
+        { name: "required", type: "boolean", default: "false", description: { tr: "Alan boşken formun gönderilmesini engeller", en: "Blocks form submission while the field is empty" } },
         { name: "name", type: "string", description: { tr: "Form gönderiminde kullanılan ad", en: "Name used on form submission" } },
+        { name: "className", type: "string", description: { tr: "Alanı ve düğmeleri saran kaba eklenir", en: "Added to the wrapper around the field and its buttons" } },
         { name: "aria-label", type: "string", description: { tr: "`Field` yoksa erişilebilir ad", en: "Accessible name when there is no `Field`" } },
       ],
     },

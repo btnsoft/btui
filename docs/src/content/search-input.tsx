@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { IconX } from "@tabler/icons-react";
-import { Badge, IconButton, SearchInput, Select } from "btui";
+import { Badge, Field, IconButton, SearchInput, Select } from "btui";
 import { CITIES, CUSTOMERS, ORDERS, STATUS_LABEL, STATUS_TONE } from "../lib/data";
 import { useLang, useText } from "../lib/i18n";
 import { definePage } from "../lib/schema";
@@ -67,6 +67,17 @@ function Label() {
   return <SearchInput aria-label={t({ tr: "Fatura listesinde ara", en: "Search the invoice list" })} placeholder={t({ tr: "Örn. FT-2026", en: "e.g. FT-2026" })} />;
 }
 
+function InField() {
+  const t = useText();
+  return (
+    <div className="d-stack">
+      <Field label={t({ tr: "Fatura ara", en: "Find an invoice" })} hint={t({ tr: "Fatura no ya da müşteri adı", en: "Invoice number or customer name" })}>
+        <SearchInput block placeholder={t({ tr: "Örn. FT-2026", en: "e.g. FT-2026" })} />
+      </Field>
+    </div>
+  );
+}
+
 export default definePage({
   summary: { tr: "Bir listeyi ya da tabloyu daraltmak için arama kutusu. Sonucu sizin filtrelemeniz gerekir; bileşen yalnız metni toplar.", en: "A search box for narrowing a list or a table. It only collects the text; the filtering is yours to do." },
   imports: 'import { SearchInput } from "btui";',
@@ -86,7 +97,7 @@ const rows = orders.filter((o) => o.customer.toLocaleLowerCase("tr").includes(q)
     ],
     dont: [
       { tr: "Form alanları; değer forma ait bir bilgiyse `Input` kullanın", en: "Form fields; if the value belongs to a form, use `Input`" },
-      { tr: "`Field` içinde; etiket kutuya bağlanmaz, `aria-label` kullanın", en: "Inside `Field`; the label does not reach the box, use `aria-label`" },
+      { tr: "Sonucu olmayan arama; kullanıcı neyi daralttığını görmelidir, `EmptyState` ile söyleyin", en: "A search that leads nowhere; people must see what they narrowed, so say it with `EmptyState`" },
       { tr: "Listeden tek bir değer seçmek; `Select` zaten arama kutusu getirir", en: "Picking one value from a list; `Select` already brings a search box" },
     ],
   },
@@ -125,15 +136,26 @@ const rows = orders.filter((o) => o.customer.toLocaleLowerCase("tr").includes(q)
       },
     },
     {
+      id: "in-field",
+      title: { tr: "Field içinde", en: "Inside Field" },
+      body: { tr: "`Field` etiketi ve açıklaması kutuya bağlanır, adı artık etiket verir. Görünür bir başlık gerektiğinde bu yolu seçin.", en: "The `Field` label and hint link to the box, and the label gives it its name. Take this route when a visible caption is needed." },
+      example: {
+        Demo: InField,
+        code: `<Field label="Find an invoice" hint="Invoice number or customer name">
+  <SearchInput block placeholder="e.g. FT-2026" />
+</Field>`,
+      },
+    },
+    {
       id: "label",
       title: { tr: "Erişilebilir ad", en: "Accessible name" },
-      body: { tr: "`aria-label` verilirse o kullanılır, verilmezse `placeholder` ad olur. Yer tutucu bir örnekse ayrıca `aria-label` yazın.", en: "`aria-label` is used when given, otherwise `placeholder` becomes the name. If the placeholder is only an example, add an `aria-label`." },
+      body: { tr: "`Field` dışında `aria-label` verilirse o kullanılır, verilmezse `placeholder` ad olur. Yer tutucu bir örnekse ayrıca `aria-label` yazın.", en: "Outside `Field`, `aria-label` is used when given, otherwise `placeholder` becomes the name. If the placeholder is only an example, add an `aria-label`." },
       example: { Demo: Label, code: `<SearchInput aria-label="Search the invoice list" placeholder="e.g. FT-2026" />` },
     },
   ],
   a11y: [
-    { tr: "Gerçek bir `input type=\"search\"` çizer ve bir `label` öğesi içinde durur; kutunun herhangi bir yerine tıklamak odaklar.", en: "It renders a real `input type=\"search\"` inside a `label`, so a click anywhere on the box focuses it." },
-    { tr: "Erişilebilir ad sırasıyla `aria-label`, `placeholder` ve dil dosyasındaki `search` metninden gelir.", en: "The accessible name comes from `aria-label`, then `placeholder`, then the `search` text in the locale." },
+    { tr: "Gerçek bir `input type=\"search\"` çizer; dıştaki `span` yalnız görünümü taşır.", en: "It renders a real `input type=\"search\"`; the outer `span` only carries the look." },
+    { tr: "`Field` içinde etiket ve açıklama alana bağlanır. `Field` dışında erişilebilir ad sırasıyla `aria-label`, `placeholder` ve dil dosyasındaki `search` metninden gelir.", en: "Inside `Field` the label and hint link to the input. Outside it, the accessible name comes from `aria-label`, then `placeholder`, then the `search` text in the locale." },
     { tr: "Sonuç sayısı yazdıkça değişiyorsa bunu `aria-live` bölgesinde duyurun; bileşen bunu yapmaz.", en: "If the result count changes while typing, announce it in an `aria-live` region; the component does not do this." },
   ],
   keyboard: [
@@ -144,21 +166,21 @@ const rows = orders.filter((o) => o.customer.toLocaleLowerCase("tr").includes(q)
   api: [
     {
       name: "SearchInput",
-      description: { tr: "`type` ve `size` dışındaki tüm yerel `input` öznitelikleri ve ref `input` öğesine iletilir; `value`, `onChange` ve `disabled` bunlara dahildir. `className` dıştaki `label` öğesine gider.", en: "All native `input` attributes except `type` and `size`, plus the ref, go to the `input` element, including `value`, `onChange` and `disabled`. `className` goes to the outer `label`." },
+      description: { tr: "`type` ve `size` dışındaki tüm yerel `input` öznitelikleri ve ref `input` öğesine iletilir; `value`, `onChange` ve `disabled` bunlara dahildir. `className` dıştaki `span` öğesine gider.", en: "All native `input` attributes except `type` and `size`, plus the ref, go to the `input` element, including `value`, `onChange` and `disabled`. `className` goes to the outer `span`." },
       props: [
         { name: "block", type: "boolean", default: "false", description: { tr: "Kabın genişliğini doldurur", en: "Fills its container" } },
         { name: "placeholder", type: "string", default: "locale.search", description: { tr: "Boşken görünen metin; verilmezse dil dosyasından gelir", en: "Text shown while empty; falls back to the locale" } },
-        { name: "aria-label", type: "string", default: "placeholder", description: { tr: "Erişilebilir ad; verilmezse `placeholder` kullanılır", en: "Accessible name; falls back to `placeholder`" } },
-        { name: "className", type: "string", description: { tr: "Dıştaki `label` öğesine eklenen sınıf", en: "Class added to the outer `label`" } },
+        { name: "aria-label", type: "string", default: "placeholder", description: { tr: "Erişilebilir ad; `Field` dışında verilmezse `placeholder` kullanılır", en: "Accessible name; outside `Field` it falls back to `placeholder`" } },
+        { name: "className", type: "string", description: { tr: "Dıştaki `span` öğesine eklenen sınıf", en: "Class added to the outer `span`" } },
       ],
     },
   ],
   styling: [
-    { name: "data-block", kind: "data", description: { tr: "`block` açıkken dıştaki `label` üzerinde bulunur", en: "Present on the outer `label` when `block` is on" } },
+    { name: "data-block", kind: "data", description: { tr: "`block` açıkken dıştaki `span` üzerinde bulunur", en: "Present on the outer `span` when `block` is on" } },
     { name: "--bt-accent", kind: "var", description: { tr: "Odaktaki kenarlık", en: "Focused border" } },
     { name: "--bt-accent-soft", kind: "var", description: { tr: "Odak halkası", en: "Focus ring" } },
     { name: "--bt-border", kind: "var", description: { tr: "Kenarlık", en: "Border" } },
     { name: "--bt-faint", kind: "var", description: { tr: "Yer tutucu rengi", en: "Placeholder colour" } },
   ],
-  related: ["input", "select", "filter-bar", "data-table"],
+  related: ["input", "field", "select", "filter-bar", "data-table"],
 });

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { IconAlertTriangle, IconCash, IconClock, IconReceipt, IconTruckDelivery } from "@tabler/icons-react";
+import { IconAlertTriangle, IconCash, IconClock, IconReceipt, IconReceiptRefund, IconTruckDelivery } from "@tabler/icons-react";
 import { Kpi, KpiGrid } from "btui";
 import { money, ORDERS, STATUS_LABEL, type OrderStatus } from "../lib/data";
 import { useLang, useText } from "../lib/i18n";
@@ -38,6 +38,17 @@ function Trends() {
     <KpiGrid>
       <Kpi label={t({ tr: "Tahsilat", en: "Collections" })} value={money(642000, lang)} trend={{ value: t({ tr: "%12", en: "12%" }), direction: "up" }} note={t({ tr: "geçen aya göre", en: "vs last month" })} />
       <Kpi label={t({ tr: "Yeni müşteri", en: "New customers" })} value={9} trend={{ value: "4", direction: "down" }} note={t({ tr: "geçen çeyreğe göre", en: "vs last quarter" })} />
+    </KpiGrid>
+  );
+}
+
+function GoodNews() {
+  const t = useText();
+  const lang = useLang();
+  return (
+    <KpiGrid>
+      <Kpi icon={<IconTruckDelivery size={15} />} label={t({ tr: "Kargo gideri", en: "Shipping costs" })} value={money(38400, lang)} trend={{ value: t({ tr: "%9", en: "9%" }), direction: "down", good: true }} note={t({ tr: "geçen aya göre", en: "vs last month" })} />
+      <Kpi icon={<IconReceiptRefund size={15} />} label={t({ tr: "İade edilen tutar", en: "Refunded amount" })} value={money(12750, lang)} trend={{ value: t({ tr: "%4", en: "4%" }), direction: "up", good: false }} note={t({ tr: "geçen aya göre", en: "vs last month" })} />
     </KpiGrid>
   );
 }
@@ -98,7 +109,7 @@ export default definePage({
     icon={<Icon />}
     label="Label"
     value="Value"
-    trend={{ value: "8%", direction: "up" }}
+    trend={{ value: "8%", direction: "up", good: true }}
     note="Note"
   />
 </KpiGrid>`,
@@ -121,12 +132,23 @@ export default definePage({
     {
       id: "trend",
       title: { tr: "Eğilim", en: "Trend" },
-      body: { tr: "`trend` önceki döneme göre değişimi gösterir. Yönün rengi sabittir: `up` yeşil, `down` kırmızıdır. İade oranı gibi düşüşün iyi olduğu ölçümlerde `trend` yerine `note` kullanın, yoksa olumlu sonuç kırmızı görünür.", en: "`trend` shows the change against the previous period. The colour follows the direction: `up` is green and `down` is red. For measures where a fall is good, such as return rate, use `note` instead, or a good result shows in red." },
+      body: { tr: "`trend` önceki döneme göre değişimi gösterir. `direction` oku belirler. `good` verilmezse `up` yeşil, `down` kırmızı görünür.", en: "`trend` shows the change against the previous period. `direction` sets the arrow. Without `good`, `up` shows green and `down` shows red." },
       example: {
         Demo: Trends,
         block: true,
         code: `<Kpi label="Collections" value={money(642000, lang)} trend={{ value: "12%", direction: "up" }} note="vs last month" />
 <Kpi label="New customers" value={9} trend={{ value: "4", direction: "down" }} note="vs last quarter" />`,
+      },
+    },
+    {
+      id: "good-news",
+      title: { tr: "Düşüşün iyi olduğu ölçümler", en: "When a fall is good news" },
+      body: { tr: "Ok yönü ile renk birbirinden bağımsızdır: `trend.good` rengi belirler. Gider ve iade gibi ölçümlerde düşüş iyi haberdir, `good: true` yeşil gösterir; artış kötü haberse `good: false` kırmızı gösterir. Ok yine gerçek yönü söyler.", en: "The arrow and the colour are independent: `trend.good` sets the colour. For measures such as costs and refunds a fall is good news, so `good: true` shows green, and when a rise is bad news `good: false` shows red. The arrow still tells the real direction." },
+      example: {
+        Demo: GoodNews,
+        block: true,
+        code: `<Kpi label="Shipping costs" value={money(38400, lang)} trend={{ value: "9%", direction: "down", good: true }} note="vs last month" />
+<Kpi label="Refunded amount" value={money(12750, lang)} trend={{ value: "4%", direction: "up", good: false }} note="vs last month" />`,
       },
     },
     {
@@ -175,7 +197,7 @@ export default definePage({
         { name: "label", type: "ReactNode", required: true, description: { tr: "Ölçümün adı", en: "Name of the measure" } },
         { name: "value", type: "ReactNode", required: true, description: { tr: "Ana değer", en: "Main value" } },
         { name: "note", type: "ReactNode", description: { tr: "Değerin altındaki kısa açıklama", en: "Short text under the value" } },
-        { name: "trend", type: '{ value: ReactNode; direction: "up" | "down" }', description: { tr: "Önceki döneme göre değişim, örneğin `%8`", en: "Change against the previous period, such as `8%`" } },
+        { name: "trend", type: '{ value: ReactNode; direction: "up" | "down"; good?: boolean }', description: { tr: "Önceki döneme göre değişim, örneğin `%8`. `good` rengi belirler; verilmezse `up` iyi sayılır", en: "Change against the previous period, such as `8%`. `good` sets the colour; without it, `up` counts as good" } },
         { name: "icon", type: "ReactNode", description: { tr: "Etiketten önce gösterilir", en: "Shown before the label" } },
         { name: "tone", type: '"neutral" | "ok" | "warn" | "danger"', default: '"neutral"', description: { tr: "Yalnız sayıyı boyar", en: "Colours the number only" } },
         { name: "onClick", type: "() => void", description: { tr: "Göstergeyi `<button>` yapar", en: "Turns the KPI into a `<button>`" } },
@@ -193,10 +215,10 @@ export default definePage({
   ],
   styling: [
     { name: "data-tone", kind: "data", description: { tr: "`.bt-kpi` üzerinde seçili ton", en: "The current tone on `.bt-kpi`" } },
-    { name: "data-direction", kind: "data", description: { tr: "`.bt-kpi-trend` üzerinde `up` ya da `down`", en: "`up` or `down` on `.bt-kpi-trend`" } },
-    { name: "--bt-ok", kind: "var", description: { tr: "`ok` sayısı ve yükselen eğilim", en: "`ok` number and rising trend" } },
+    { name: "data-good", kind: "data", description: { tr: "`.bt-kpi-trend` üzerinde `true` ya da `false`", en: "`true` or `false` on `.bt-kpi-trend`" } },
+    { name: "--bt-ok", kind: "var", description: { tr: "`ok` sayısı ve iyi yöndeki eğilim", en: "`ok` number and a trend in the good direction" } },
     { name: "--bt-warn", kind: "var", description: { tr: "`warn` sayısı", en: "`warn` number" } },
-    { name: "--bt-danger", kind: "var", description: { tr: "`danger` sayısı ve düşen eğilim", en: "`danger` number and falling trend" } },
+    { name: "--bt-danger", kind: "var", description: { tr: "`danger` sayısı ve kötü yöndeki eğilim", en: "`danger` number and a trend in the bad direction" } },
     { name: "--bt-muted", kind: "var", description: { tr: "Etiket ve not rengi", en: "Label and note colour" } },
   ],
   related: ["card", "data-table", "badge", "progress"],

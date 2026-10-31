@@ -2,8 +2,12 @@ import { useState } from "react";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { useToast, Accordion, Alert, Avatar, BtuiProvider, Checkbox, Button, DataTable, Sidebar, Tabs, Field, FileDropzone, Input, Modal, MultiSelect, NumberInput, RadioGroup, Select, Switch, pageRange, sortRows, useConfirm, type Column } from "../src";
+import { Calendar, DatePicker, DateRangePicker, SearchInput, useToast, Accordion, Alert, Avatar, BtuiProvider, Checkbox, Button, DataTable, Sidebar, Tabs, Field, FileDropzone, Input, Modal, MultiSelect, NumberInput, RadioGroup, Select, Switch, pageRange, sortRows, useConfirm, type Column } from "../src";
 import { fileMatchesAccept, includesText } from "../src/utils";
+import { buildCsv, buildXlsx, parseNumber, pivot, sortByMany } from "../src";
+import { FilterPanel } from "../src/components/table/parts";
+import { columnName, filterRows, groupRows, parseTsv, toTsv, type Column as GridColumn } from "../src/components/table/engine";
+import { addMonths, dateOrder, firstDayOfWeek, monthGrid, parseDate } from "../src/date";
 
 type Row = { id: number; name: string; km: number | null };
 const rows: Row[] = [
@@ -98,7 +102,7 @@ describe("DataTable", () => {
     const onSortChange = vi.fn();
     render(<DataTable columns={columns} rows={rows.slice(0, 2)} getRowKey={(r) => r.id} pageSize={2} onSortChange={onSortChange} server={{ total: 40, page: 1, onPageChange }} />);
     await user.click(screen.getByRole("button", { name: /Ad/ }));
-    expect(onSortChange).toHaveBeenCalledWith({ key: "name", direction: "asc" });
+    expect(onSortChange).toHaveBeenCalledWith({ key: "name", direction: "asc" }, [{ key: "name", direction: "asc" }]);
     expect(firstCells()).toEqual(["Şule", "Ali"]);
     await user.click(screen.getByRole("button", { name: "Sonraki sayfa" }));
     expect(onPageChange).toHaveBeenCalledWith(2);
@@ -373,5 +377,363 @@ describe("Checkbox", () => {
     const { container } = render(<Checkbox indeterminate aria-label="Tümü" />);
     expect(container.querySelector(".bt-check-dash")).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: "Tümü" })).toHaveAttribute("aria-checked", "mixed");
+  });
+});
+
+describe("Field wiring", () => {
+  it("keeps option names in a labelled RadioGroup, with unique ids", () => {
+    const { container } = render(<Field label="Teslimat"><RadioGroup options={[{ value: "a", label: "Kargo" }, { value: "b", label: "Elden" }]} /></Field>);
+    expect(screen.getByRole("radio", { name: "Kargo" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Elden" })).toBeInTheDocument();
+    expect(screen.getByRole("radiogroup", { name: "Teslimat" })).toBeInTheDocument();
+    const ids = Array.from(container.querySelectorAll("input")).map((i) => i.id).filter(Boolean);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("does not let the Field label rename a labelled Checkbox or Switch", () => {
+    render(<><Field label="Vergi"><Checkbox label="KDV muaf" /></Field><Field label="Bildirim"><Switch label="E-posta" /></Field></>);
+    expect(screen.getByRole("checkbox", { name: "KDV muaf" })).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "E-posta" })).toBeInTheDocument();
+  });
+
+  it("links a SearchInput and a FileDropzone to the Field label and hint", () => {
+    const { container } = render(<><Field label="Ara" hint="En az üç harf"><SearchInput /></Field><Field label="Belge"><FileDropzone files={[]} onChange={() => {}} /></Field></>);
+    expect(screen.getByLabelText("Ara")).toHaveAccessibleDescription("En az üç harf");
+    expect(screen.getByLabelText("Belge")).toBe(container.querySelector("input[type=file]"));
+  });
+
+  it("FileDropzone skips duplicates and honours maxFiles", () => {
+    const onChange = vi.fn();
+    const a = new File(["a"], "a.pdf", { lastModified: 1 });
+    const { container } = render(<FileDropzone files={[a]} onChange={onChange} multiple maxFiles={2} />);
+    const b = new File(["b"], "b.pdf", { lastModified: 2 });
+    const c = new File(["c"], "c.pdf", { lastModified: 3 });
+    fireEvent.drop(container.querySelector(".bt-drop-box")!, { dataTransfer: { files: [a, b, c] } });
+    expect(onChange).toHaveBeenCalledWith([a, b]);
+    expect(screen.getByText("En çok 2 dosya eklenebilir")).toBeInTheDocument();
+  });
+});
+
+describe("dates", () => {
+  it("parses what people type, by language", () => {
+    expect(parseDate("31.10.2026", "tr")).toBe("2026-10-31");
+    expect(parseDate("31/10/26", "tr")).toBe("2026-10-31");
+    expect(parseDate("31102026", "tr")).toBe("2026-10-31");
+    expect(parseDate("10/31/2026", "en")).toBe("2026-10-31");
+    expect(parseDate("31.02.2026", "tr")).toBeNull();
+    expect(parseDate("elma", "tr")).toBeNull();
+    expect(dateOrder("tr")).toEqual(["day", "month", "year"]);
+  });
+
+  it("clamps month ends and starts weeks by language", () => {
+    expect(addMonths("2026-01-31", 1)).toBe("2026-02-28");
+    expect(firstDayOfWeek("tr")).toBe(1);
+    expect(monthGrid("2026-10-15", 1)[0]).toBe("2026-09-28");
+    expect(monthGrid("2026-10-15", 1)).toHaveLength(42);
+  });
+
+  it("Calendar moves by keyboard across months and skips nothing", async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    render(<BtuiProvider><Calendar value="2026-10-31" onSelect={onSelect} /></BtuiProvider>);
+    const day = screen.getByRole("button", { name: /^31 Ekim 2026/ });
+    day.focus();
+    await user.keyboard("{ArrowRight}");
+    expect(document.activeElement).toHaveAttribute("data-date", "2026-11-01");
+    await user.keyboard("{PageUp}");
+    expect(document.activeElement).toHaveAttribute("data-date", "2026-10-01");
+    await user.keyboard("{Enter}");
+    expect(onSelect).toHaveBeenCalledWith("2026-10-01");
+  });
+
+  it("Calendar closes days outside the limits", () => {
+    render(<BtuiProvider><Calendar value="2026-10-15" min="2026-10-10" isDateDisabled={(d) => d === "2026-10-20"} onSelect={() => {}} /></BtuiProvider>);
+    expect(screen.getByRole("button", { name: /^9 Ekim 2026/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^20 Ekim 2026/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^10 Ekim 2026/ })).toBeEnabled();
+  });
+
+  function Picker({ onChange, ...rest }: { onChange: (v: string | null) => void; min?: string }) {
+    const [value, setValue] = useState<string | null>("2026-10-15");
+    return <BtuiProvider><DatePicker aria-label="Vade" value={value} onChange={(v) => { setValue(v); onChange(v); }} {...rest} /></BtuiProvider>;
+  }
+
+  it("DatePicker commits typed text, rejects a bad day and picks from the calendar", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<Picker onChange={onChange} />);
+    const input = screen.getByLabelText("Vade");
+    expect(input).toHaveValue("15.10.2026");
+    await user.clear(input);
+    await user.type(input, "31.02.2026{Enter}");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(onChange).not.toHaveBeenCalled();
+    await user.clear(input);
+    await user.type(input, "20102026{Enter}");
+    expect(onChange).toHaveBeenLastCalledWith("2026-10-20");
+    await user.click(screen.getByRole("button", { name: "Takvimi aç" }));
+    await user.click(await screen.findByRole("button", { name: /^22 Ekim 2026/ }));
+    expect(onChange).toHaveBeenLastCalledWith("2026-10-22");
+  });
+
+  it("DateRangePicker swaps reversed picks and applies presets", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const Demo = () => {
+      const [value, setValue] = useState({ start: "2026-10-10", end: "2026-10-12" } as { start: string | null; end: string | null });
+      return <BtuiProvider><DateRangePicker value={value} onChange={(v) => { setValue(v); onChange(v); }} /></BtuiProvider>;
+    };
+    render(<Demo />);
+    await user.click(screen.getByRole("button", { name: "Takvimi aç" }));
+    await user.click(await screen.findByRole("button", { name: /^20 Ekim 2026/ }));
+    await user.click(screen.getByRole("button", { name: /^5 Ekim 2026/ }));
+    expect(onChange).toHaveBeenLastCalledWith({ start: "2026-10-05", end: "2026-10-20" });
+    await user.click(screen.getByRole("button", { name: "Takvimi aç" }));
+    await user.click(await screen.findByRole("button", { name: "Bugün" }));
+    const last = onChange.mock.lastCall![0];
+    expect(last.start).toBe(last.end);
+  });
+});
+
+describe("grid engine", () => {
+  type Sale = { id: number; city: string; team: string; amount: number | null; day: string };
+  const sales: Sale[] = [
+    { id: 1, city: "İzmir", team: "A", amount: 100, day: "2026-10-01" },
+    { id: 2, city: "Şırnak", team: "A", amount: 50, day: "2026-10-05" },
+    { id: 3, city: "İzmir", team: "B", amount: null, day: "2026-11-01" },
+    { id: 4, city: "Ankara", team: "B", amount: 300, day: "2026-11-09" },
+  ];
+  const cols: GridColumn<Sale>[] = [{ key: "city", header: "İl" }, { key: "team", header: "Ekip" }, { key: "amount", header: "Tutar", type: "number", aggregate: "sum" }, { key: "day", header: "Gün", type: "date" }];
+
+  it("filters by text, number, date and set with AND logic", () => {
+    const ids = (f: Parameters<typeof filterRows<Sale>>[2], search = "") => filterRows(sales, cols, f, search, "tr").map((r) => r.id);
+    expect(ids({ city: { type: "text", op: "contains", value: "izmir" } })).toEqual([1, 3]);
+    expect(ids({ amount: { type: "number", op: ">=", value: 100 } })).toEqual([1, 4]);
+    expect(ids({ amount: { type: "number", op: "between", value: 40, to: 120 } })).toEqual([1, 2]);
+    expect(ids({ amount: { type: "number", op: "empty" } })).toEqual([3]);
+    expect(ids({ day: { type: "date", start: "2026-10-02", end: "2026-11-01" } })).toEqual([2, 3]);
+    expect(ids({ team: { type: "set", values: ["B"] } })).toEqual([3, 4]);
+    expect(ids({ team: { type: "set", values: ["B"] }, city: { type: "text", op: "equals", value: "ankara" } })).toEqual([4]);
+    expect(ids({}, "şırnak")).toEqual([2]);
+  });
+
+  it("sorts by several columns and keeps blanks last both ways", () => {
+    const order = (s: Parameters<typeof sortByMany<Sale>>[1]) => sortByMany(sales, s, cols, "tr").map((r) => r.id);
+    expect(order([{ key: "team", direction: "asc" }, { key: "amount", direction: "desc" }])).toEqual([1, 2, 4, 3]);
+    expect(order([{ key: "amount", direction: "desc" }])).toEqual([4, 1, 2, 3]);
+    expect(order([{ key: "amount", direction: "asc" }])).toEqual([2, 1, 4, 3]);
+  });
+
+  it("nests groups", () => {
+    const tree = groupRows(sales, [cols[1], cols[0]]);
+    expect(tree.map((n) => [n.value, n.rows.length])).toEqual([["A", 2], ["B", 2]]);
+    expect(tree[1].children!.map((n) => n.value)).toEqual(["İzmir", "Ankara"]);
+  });
+
+  it("builds a pivot with totals that add up", () => {
+    const result = pivot(sales, { rows: [cols[0]], columns: cols[1], value: cols[2], aggregate: "sum" }, "tr", "Toplam");
+    expect(result.columns.map((c) => c.key)).toEqual(["r:city", "c:A", "c:B", "__total"]);
+    const izmir = result.rows.find((r) => r["r:city"] === "İzmir")!;
+    expect(izmir["c:A"]).toBe(100);
+    expect(izmir.__total).toBe(100);
+    expect(result.columns.at(-1)!.footer).toBe("450");
+  });
+
+  it("round-trips TSV with quotes, tabs and line breaks", () => {
+    const grid = [["a", "b\tc"], ['say "hi"', "line\nbreak"]];
+    expect(parseTsv(toTsv(grid))).toEqual(grid);
+  });
+
+  it("reads pasted numbers by language", () => {
+    expect(parseNumber("1.250,50", "tr")).toBe(1250.5);
+    expect(parseNumber("1,250.50", "en")).toBe(1250.5);
+    expect(parseNumber("₺3.000", "tr")).toBe(3000);
+    expect(parseNumber("abc", "tr")).toBeNull();
+  });
+
+  it("names spreadsheet columns", () => {
+    expect([0, 25, 26, 701, 702].map(columnName)).toEqual(["A", "Z", "AA", "ZZ", "AAA"]);
+  });
+
+  it("neutralises formulas in CSV and keeps Turkish letters", () => {
+    const csv = buildCsv([{ header: "Şirket" }], [["=HYPERLINK(1)"], ["Çınar;Gıda"]]);
+    expect(csv.startsWith("\ufeffŞirket")).toBe(true);
+    expect(csv).toContain("'=HYPERLINK(1)");
+    expect(csv).toContain('"Çınar;Gıda"');
+  });
+
+  it("writes a zip container with the workbook parts", () => {
+    const bytes = buildXlsx({ columns: [{ header: "A" }], rows: [["x"]] });
+    expect([bytes[0], bytes[1]]).toEqual([0x50, 0x4b]);
+    expect(new TextDecoder().decode(bytes)).toContain("xl/worksheets/sheet1.xml");
+  });
+});
+
+describe("grid behaviour", () => {
+  type Item = { id: number; name: string; qty: number };
+  const items: Item[] = [{ id: 1, name: "Kalem", qty: 5 }, { id: 2, name: "Defter", qty: 12 }, { id: 3, name: "Silgi", qty: 7 }];
+  const cols: Column<Item>[] = [{ key: "name", header: "Ürün", editable: true }, { key: "qty", header: "Adet", type: "number", editable: true, validate: (v) => (typeof v === "number" && v < 0 ? "Negatif olamaz" : undefined), aggregate: "sum" }];
+
+  function Editable({ onEdit }: { onEdit: (c: { key: string; value: unknown; previous: unknown }[]) => void }) {
+    const [rows, setRows] = useState(items);
+    return (
+      <BtuiProvider>
+        <DataTable aria-label="x" columns={cols} rows={rows} getRowKey={(r) => r.id} cellSelection totals onCellEdit={(changes) => {
+          onEdit(changes);
+          setRows((list) => list.map((row) => changes.reduce((acc, c) => (c.row.id === row.id ? { ...acc, [c.key]: c.value } : acc), row)));
+        }} />
+      </BtuiProvider>
+    );
+  }
+
+  it("moves with arrow keys, edits, rejects a bad value and undoes", async () => {
+    const user = userEvent.setup();
+    const onEdit = vi.fn();
+    render(<Editable onEdit={onEdit} />);
+    const grid = screen.getByRole("grid");
+    grid.focus();
+    await user.keyboard("{ArrowDown}{ArrowRight}");
+    expect(grid.getAttribute("aria-activedescendant")).toMatch(/-0-1$/);
+    await user.keyboard("{Enter}");
+    const box = screen.getByRole("textbox", { name: "Adet" });
+    await user.clear(box);
+    await user.type(box, "-1{Enter}");
+    expect(onEdit).not.toHaveBeenCalled();
+    expect(box).toHaveAttribute("aria-invalid", "true");
+    await user.clear(box);
+    await user.type(box, "9{Enter}");
+    expect(onEdit).toHaveBeenLastCalledWith([expect.objectContaining({ key: "qty", value: 9, previous: 5 })]);
+    expect(screen.getAllByRole("gridcell")[1]).toHaveTextContent("9");
+    await user.keyboard("{Control>}z{/Control}");
+    expect(onEdit).toHaveBeenLastCalledWith([expect.objectContaining({ key: "qty", value: 5, previous: 9 })]);
+    await user.keyboard("{Control>}y{/Control}");
+    expect(onEdit).toHaveBeenLastCalledWith([expect.objectContaining({ key: "qty", value: 9, previous: 5 })]);
+  });
+
+  it("sums a dragged range in the status bar and pastes a block", async () => {
+    const onEdit = vi.fn();
+    const { container } = render(<Editable onEdit={onEdit} />);
+    const cells = screen.getAllByRole("gridcell");
+    fireEvent.pointerDown(cells[1], { button: 0 });
+    fireEvent.pointerOver(cells[5]);
+    fireEvent.pointerUp(window);
+    expect(container.querySelector(".bt-status-bar")).toHaveTextContent("Toplam: 24");
+    const paste = new Event("paste", { bubbles: true }) as Event & { clipboardData?: unknown };
+    paste.clipboardData = { getData: () => "1\n2" };
+    fireEvent(screen.getByRole("grid"), paste);
+    expect(onEdit).toHaveBeenCalledWith([expect.objectContaining({ value: 1 }), expect.objectContaining({ value: 2 })]);
+  });
+
+  it("adds a sort level with Shift and groups with totals", async () => {
+    const user = userEvent.setup();
+    const onSort = vi.fn();
+    render(<DataTable columns={cols} rows={items} getRowKey={(r) => r.id} defaultGroupBy={[]} onSortChange={onSort} />);
+    await user.click(screen.getByRole("button", { name: /Ürün/ }));
+    await user.keyboard("{Shift>}");
+    await user.click(screen.getByRole("button", { name: /Adet/ }));
+    await user.keyboard("{/Shift}");
+    expect(onSort.mock.lastCall![1]).toHaveLength(2);
+  });
+
+  it("collapses a group and shows its aggregate", async () => {
+    const user = userEvent.setup();
+    type G = { id: number; team: string; qty: number };
+    const rows: G[] = [{ id: 1, team: "A", qty: 2 }, { id: 2, team: "A", qty: 3 }, { id: 3, team: "B", qty: 9 }];
+    const groupCols: Column<G>[] = [{ key: "id", header: "No" }, { key: "team", header: "Ekip" }, { key: "qty", header: "Adet", type: "number", aggregate: "sum" }];
+    render(<BtuiProvider><DataTable columns={groupCols} rows={rows} getRowKey={(r) => r.id} defaultGroupBy={["team"]} /></BtuiProvider>);
+    expect(screen.getByText("5")).toBeInTheDocument();
+    expect(screen.getAllByRole("row")).toHaveLength(6);
+    await user.click(screen.getByRole("button", { name: "Ekip: A" }));
+    expect(screen.getAllByRole("row")).toHaveLength(4);
+  });
+
+  it("loads blocks from a data source and drops stale answers", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const getRows = vi.fn(async ({ start, end, search }: { start: number; end: number; search: string }) => ({
+      rows: Array.from({ length: Math.min(end, 1000) - start }, (_, i) => ({ id: start + i, name: `${search}R${start + i}`, qty: 1 })),
+      total: 1000,
+    }));
+    render(<BtuiProvider><DataTable columns={cols} rows={[]} getRowKey={(r) => r.id} dataSource={{ getRows }} /></BtuiProvider>);
+    await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+    vi.useRealTimers();
+    expect(getRows).toHaveBeenCalled();
+    expect(getRows.mock.calls[0][0]).toMatchObject({ start: 0, end: 100 });
+    expect(await screen.findByText("R0")).toBeInTheDocument();
+    expect(screen.getByRole("table")).toHaveAttribute("aria-rowcount", "1001");
+  });
+});
+
+describe("filter panel", () => {
+  it("keeps a chosen condition until a value arrives", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const column: GridColumn<{ qty: number }> = { key: "qty", header: "Adet", type: "number" };
+    render(<BtuiProvider><FilterPanel column={column} rows={[]} filter={undefined} onChange={onChange} /></BtuiProvider>);
+    await user.click(screen.getByRole("combobox", { name: "Koşul" }));
+    await user.click(await screen.findByRole("option", { name: "Büyük eşit" }));
+    await user.type(screen.getByRole("textbox", { name: "Değer" }), "20000{Enter}");
+    expect(onChange).toHaveBeenLastCalledWith({ type: "number", op: ">=", value: 20000 });
+  });
+});
+
+describe("date picker wiring", () => {
+  it("opens from the filter variant", async () => {
+    const user = userEvent.setup();
+    render(<BtuiProvider><DatePicker variant="filter" label="Vade" value={null} onChange={() => {}} /></BtuiProvider>);
+    await user.click(screen.getByRole("button", { name: /Vade/ }));
+    expect(await screen.findByRole("grid")).toBeInTheDocument();
+  });
+
+  it("submits ISO from a Field name and keeps edge names in a range", () => {
+    const { container } = render(
+      <BtuiProvider>
+        <form>
+          <Field name="due" label="Vade"><DatePicker value="2026-10-31" onChange={() => {}} /></Field>
+          <Field name="span" label="Dönem"><DateRangePicker value={{ start: "2026-10-01", end: "2026-10-05" }} onChange={() => {}} /></Field>
+        </form>
+      </BtuiProvider>,
+    );
+    const data = new FormData(container.querySelector("form")!);
+    expect([...data.keys()].sort()).toEqual(["due", "spanEnd", "spanStart"]);
+    expect(data.get("due")).toBe("2026-10-31");
+    expect(screen.getByLabelText("Vade")).toHaveValue("31.10.2026");
+    expect(screen.getByRole("group", { name: "Dönem" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Başlangıç tarihi").id).not.toBe(screen.getByLabelText("Bitiş tarihi").id);
+  });
+
+  it("makes required count on the empty field and filter variants", () => {
+    const { container } = render(
+      <BtuiProvider>
+        <form id="a"><DatePicker aria-label="A" required value={null} onChange={() => {}} /></form>
+        <form id="b"><DatePicker variant="filter" required name="x" value={null} onChange={() => {}} /></form>
+      </BtuiProvider>,
+    );
+    expect(container.querySelector<HTMLFormElement>("#a")!.checkValidity()).toBe(false);
+    expect(container.querySelector<HTMLFormElement>("#b")!.checkValidity()).toBe(false);
+  });
+
+  it("skips closed days from the keyboard and always keeps a tab stop", async () => {
+    const user = userEvent.setup();
+    const weekend = (d: string) => [0, 6].includes(new Date(`${d}T00:00:00Z`).getUTCDay());
+    render(<BtuiProvider><Calendar value="2026-10-30" isDateDisabled={weekend} onSelect={() => {}} /></BtuiProvider>);
+    screen.getByRole("button", { name: /^30 Ekim 2026/ }).focus();
+    await user.keyboard("{ArrowRight}");
+    expect(document.activeElement).toHaveAttribute("data-date", "2026-11-02");
+    await user.click(screen.getByRole("button", { name: "Sonraki ay" }));
+    await user.click(screen.getByRole("button", { name: "Sonraki ay" }));
+    expect(document.querySelectorAll('.bt-cal-day[tabindex="0"]')).toHaveLength(1);
+  });
+
+  it("enforces maxDays on typed dates and shortcuts", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<BtuiProvider><DateRangePicker maxDays={7} value={{ start: "2026-10-01", end: "2026-10-03" }} onChange={onChange} /></BtuiProvider>);
+    const end = screen.getByLabelText("Bitiş tarihi");
+    await user.clear(end);
+    await user.type(end, "20.10.2026{Enter}");
+    expect(onChange).not.toHaveBeenCalled();
+    expect(end).toHaveAttribute("aria-invalid", "true");
+    await user.click(screen.getByRole("button", { name: "Takvimi aç" }));
+    expect(await screen.findByRole("button", { name: "Son 30 gün" })).toBeDisabled();
   });
 });

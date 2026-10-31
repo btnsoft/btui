@@ -1,23 +1,22 @@
-import { useState } from "react";
-import { Field, Input, RadioGroup } from "btui";
+import { useState, type FormEvent } from "react";
+import { Button, Field, Input, RadioGroup } from "btui";
 import { useText } from "../lib/i18n";
 import { definePage } from "../lib/schema";
 
 function Payment() {
   const t = useText();
-  const label = t({ tr: "Ödeme yöntemi", en: "Payment method" });
   return (
     <div className="d-stack">
-      <span className="bt-label">{label}</span>
-      <RadioGroup
-        aria-label={label}
-        defaultValue="transfer"
-        options={[
-          { value: "transfer", label: t({ tr: "Havale / EFT", en: "Bank transfer" }), hint: t({ tr: "Fatura tarihinden itibaren 30 gün vade", en: "Due 30 days after the invoice date" }) },
-          { value: "card", label: t({ tr: "Kredi kartı", en: "Credit card" }), hint: t({ tr: "Sipariş anında tahsil edilir", en: "Charged when the order is placed" }) },
-          { value: "check", label: t({ tr: "Çek", en: "Cheque" }), hint: t({ tr: "Yalnız onaylı bayiler için", en: "For approved dealers only" }) },
-        ]}
-      />
+      <Field label={t({ tr: "Ödeme yöntemi", en: "Payment method" })}>
+        <RadioGroup
+          defaultValue="transfer"
+          options={[
+            { value: "transfer", label: t({ tr: "Havale / EFT", en: "Bank transfer" }), hint: t({ tr: "Fatura tarihinden itibaren 30 gün vade", en: "Due 30 days after the invoice date" }) },
+            { value: "card", label: t({ tr: "Kredi kartı", en: "Credit card" }), hint: t({ tr: "Sipariş anında tahsil edilir", en: "Charged when the order is placed" }) },
+            { value: "check", label: t({ tr: "Çek", en: "Cheque" }), hint: t({ tr: "Yalnız onaylı bayiler için", en: "For approved dealers only" }) },
+          ]}
+        />
+      </Field>
     </div>
   );
 }
@@ -25,16 +24,19 @@ function Payment() {
 function Horizontal() {
   const t = useText();
   return (
-    <RadioGroup
-      aria-label={t({ tr: "Fatura türü", en: "Invoice type" })}
-      orientation="horizontal"
-      defaultValue="corporate"
-      options={[
-        { value: "corporate", label: t({ tr: "Kurumsal", en: "Corporate" }) },
-        { value: "personal", label: t({ tr: "Bireysel", en: "Personal" }) },
-        { value: "export", label: t({ tr: "İhracat", en: "Export" }) },
-      ]}
-    />
+    <div className="d-stack">
+      <Field label={t({ tr: "Fatura türü", en: "Invoice type" })}>
+        <RadioGroup
+          orientation="horizontal"
+          defaultValue="corporate"
+          options={[
+            { value: "corporate", label: t({ tr: "Kurumsal", en: "Corporate" }) },
+            { value: "personal", label: t({ tr: "Bireysel", en: "Personal" }) },
+            { value: "export", label: t({ tr: "İhracat", en: "Export" }) },
+          ]}
+        />
+      </Field>
+    </div>
   );
 }
 
@@ -43,16 +45,17 @@ function Conditional() {
   const [type, setType] = useState("corporate");
   return (
     <div className="d-stack">
-      <RadioGroup
-        aria-label={t({ tr: "Fatura türü", en: "Invoice type" })}
-        orientation="horizontal"
-        value={type}
-        onChange={setType}
-        options={[
-          { value: "corporate", label: t({ tr: "Kurumsal", en: "Corporate" }) },
-          { value: "personal", label: t({ tr: "Bireysel", en: "Personal" }) },
-        ]}
-      />
+      <Field label={t({ tr: "Fatura türü", en: "Invoice type" })}>
+        <RadioGroup
+          orientation="horizontal"
+          value={type}
+          onChange={setType}
+          options={[
+            { value: "corporate", label: t({ tr: "Kurumsal", en: "Corporate" }) },
+            { value: "personal", label: t({ tr: "Bireysel", en: "Personal" }) },
+          ]}
+        />
+      </Field>
       {type === "corporate" ? (
         <Field label={t({ tr: "Vergi numarası", en: "Tax number" })}><Input inputMode="numeric" defaultValue="4210098765" /></Field>
       ) : (
@@ -65,30 +68,36 @@ function Conditional() {
 function DisabledOption() {
   const t = useText();
   return (
-    <RadioGroup
-      aria-label={t({ tr: "Kargo seçeneği", en: "Shipping option" })}
-      defaultValue="standard"
-      options={[
-        { value: "standard", label: t({ tr: "Standart", en: "Standard" }), hint: t({ tr: "2-3 iş günü", en: "2-3 business days" }) },
-        { value: "express", label: t({ tr: "Hızlı", en: "Express" }), hint: t({ tr: "Ertesi iş günü", en: "Next business day" }) },
-        { value: "pallet", label: t({ tr: "Paletli", en: "Pallet" }), hint: t({ tr: "Bu sipariş için uygun değil", en: "Not available for this order" }), disabled: true },
-      ]}
-    />
+    <div className="d-stack">
+      <Field label={t({ tr: "Kargo seçeneği", en: "Shipping option" })}>
+        <RadioGroup
+          defaultValue="standard"
+          options={[
+            { value: "standard", label: t({ tr: "Standart", en: "Standard" }), hint: t({ tr: "2-3 iş günü", en: "2-3 business days" }) },
+            { value: "express", label: t({ tr: "Hızlı", en: "Express" }), hint: t({ tr: "Ertesi iş günü", en: "Next business day" }) },
+            { value: "pallet", label: t({ tr: "Paletli", en: "Pallet" }), hint: t({ tr: "Bu sipariş için uygun değil", en: "Not available for this order" }), disabled: true },
+          ]}
+        />
+      </Field>
+    </div>
   );
 }
 
 function DisabledGroup() {
   const t = useText();
   return (
-    <RadioGroup
-      aria-label={t({ tr: "Onay akışı", en: "Approval flow" })}
-      disabled
-      defaultValue="two"
-      options={[
-        { value: "one", label: t({ tr: "Tek onay", en: "Single approval" }) },
-        { value: "two", label: t({ tr: "Çift onay", en: "Double approval" }) },
-      ]}
-    />
+    <div className="d-stack">
+      <Field label={t({ tr: "Onay akışı", en: "Approval flow" })}>
+        <RadioGroup
+          disabled
+          defaultValue="two"
+          options={[
+            { value: "one", label: t({ tr: "Tek onay", en: "Single approval" }) },
+            { value: "two", label: t({ tr: "Çift onay", en: "Double approval" }) },
+          ]}
+        />
+      </Field>
+    </div>
   );
 }
 
@@ -97,10 +106,8 @@ function Validation() {
   const [term, setTerm] = useState("");
   return (
     <div className="d-stack">
-      <span className="bt-label">{t({ tr: "Ödeme vadesi", en: "Payment term" })}</span>
-      <Field error={term ? undefined : t({ tr: "Bir vade seçin", en: "Choose a term" })}>
+      <Field label={t({ tr: "Ödeme vadesi", en: "Payment term" })} error={term ? undefined : t({ tr: "Bir vade seçin", en: "Choose a term" })}>
         <RadioGroup
-          aria-label={t({ tr: "Ödeme vadesi", en: "Payment term" })}
           orientation="horizontal"
           value={term}
           onChange={setTerm}
@@ -115,22 +122,67 @@ function Validation() {
   );
 }
 
+function Standalone() {
+  const t = useText();
+  return (
+    <div className="d-stack">
+      <b id="radio-caption">{t({ tr: "Teslimat saati", en: "Delivery time" })}</b>
+      <RadioGroup
+        aria-labelledby="radio-caption"
+        orientation="horizontal"
+        defaultValue="morning"
+        options={[
+          { value: "morning", label: t({ tr: "Sabah", en: "Morning" }) },
+          { value: "afternoon", label: t({ tr: "Öğleden sonra", en: "Afternoon" }) },
+        ]}
+      />
+    </div>
+  );
+}
+
+function Required() {
+  const t = useText();
+  const [sent, setSent] = useState("");
+  const submit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSent(JSON.stringify(Object.fromEntries(new FormData(e.currentTarget))));
+  };
+  return (
+    <form className="d-stack" onSubmit={submit}>
+      <Field label={t({ tr: "Fatura para birimi", en: "Invoice currency" })}>
+        <RadioGroup
+          required
+          name="currency"
+          orientation="horizontal"
+          options={[
+            { value: "TRY", label: "TRY" },
+            { value: "EUR", label: "EUR" },
+            { value: "USD", label: "USD" },
+          ]}
+        />
+      </Field>
+      <Button type="submit" variant="primary">{t({ tr: "Gönder", en: "Submit" })}</Button>
+      {sent ? <code>{sent}</code> : null}
+    </form>
+  );
+}
+
 export default definePage({
   summary: { tr: "Birbirini dışlayan seçeneklerden tam olarak birini seçtirir. Tüm seçenekler görünür kaldığı için karşılaştırmayı kolaylaştırır.", en: "Picks exactly one of several mutually exclusive options. All options stay in view, which makes them easy to compare." },
   imports: 'import { RadioGroup } from "btui";',
   base: "radio-group",
   hero: {
     Demo: Payment,
-    code: `<span className="bt-label">Payment method</span>
-<RadioGroup
-  aria-label="Payment method"
-  defaultValue="transfer"
-  options={[
-    { value: "transfer", label: "Bank transfer", hint: "Due 30 days after the invoice date" },
-    { value: "card", label: "Credit card", hint: "Charged when the order is placed" },
-    { value: "check", label: "Cheque", hint: "For approved dealers only" },
-  ]}
-/>`,
+    code: `<Field label="Payment method">
+  <RadioGroup
+    defaultValue="transfer"
+    options={[
+      { value: "transfer", label: "Bank transfer", hint: "Due 30 days after the invoice date" },
+      { value: "card", label: "Credit card", hint: "Charged when the order is placed" },
+      { value: "check", label: "Cheque", hint: "For approved dealers only" },
+    ]}
+  />
+</Field>`,
   },
   use: {
     do: [
@@ -141,16 +193,17 @@ export default definePage({
     dont: [
       { tr: "Altıdan fazla seçenek; `Select` daha az yer kaplar", en: "More than six options; `Select` takes less room" },
       { tr: "Birden çok seçim; `Checkbox` kullanın", en: "Several choices; use `Checkbox`" },
-      { tr: "`Field` ile `label` birlikte; alan etiketi her seçeneğin adı olur ve tıklayınca ilk seçeneği seçer", en: "`Field` with a `label`; the field label names every option and a click on it selects the first" },
+      { tr: "İki seçenekli açma kapama; tek bir `Checkbox` ya da `Switch` daha sadedir", en: "A two option on and off choice; a single `Checkbox` or `Switch` is simpler" },
     ],
   },
-  anatomy: `<RadioGroup
-  aria-label="Group name"
-  orientation="vertical"
-  value={value}
-  onChange={setValue}
-  options={[{ value: "a", label: "Option", hint: "Help text", disabled: false }]}
-/>`,
+  anatomy: `<Field label="Group name" hint="Help text" error="Error message">
+  <RadioGroup
+    orientation="vertical"
+    value={value}
+    onChange={setValue}
+    options={[{ value: "a", label: "Option", hint: "Help text", disabled: false }]}
+  />
+</Field>`,
   examples: [
     {
       id: "horizontal",
@@ -158,16 +211,17 @@ export default definePage({
       body: { tr: "Kısa etiketli iki üç seçenek için `orientation=\"horizontal\"` yer kazandırır. Dar ekranda alt satıra geçer. Açıklamalı seçeneklerde dikey düzen daha rahat okunur.", en: "For two or three short options, `orientation=\"horizontal\"` saves room and wraps on narrow screens. Options with hints read better vertically." },
       example: {
         Demo: Horizontal,
-        code: `<RadioGroup
-  aria-label="Invoice type"
-  orientation="horizontal"
-  defaultValue="corporate"
-  options={[
-    { value: "corporate", label: "Corporate" },
-    { value: "personal", label: "Personal" },
-    { value: "export", label: "Export" },
-  ]}
-/>`,
+        code: `<Field label="Invoice type">
+  <RadioGroup
+    orientation="horizontal"
+    defaultValue="corporate"
+    options={[
+      { value: "corporate", label: "Corporate" },
+      { value: "personal", label: "Personal" },
+      { value: "export", label: "Export" },
+    ]}
+  />
+</Field>`,
       },
     },
     {
@@ -178,7 +232,9 @@ export default definePage({
         Demo: Conditional,
         code: `const [type, setType] = useState("corporate");
 
-<RadioGroup aria-label="Invoice type" orientation="horizontal" value={type} onChange={setType} options={TYPES} />
+<Field label="Invoice type">
+  <RadioGroup orientation="horizontal" value={type} onChange={setType} options={TYPES} />
+</Field>
 {type === "corporate" ? (
   <Field label="Tax number"><Input inputMode="numeric" /></Field>
 ) : (
@@ -203,23 +259,46 @@ export default definePage({
       id: "disabled-group",
       title: { tr: "Kapalı grup", en: "Disabled group" },
       body: { tr: "`disabled` grubun tamamını kapatır. Seçili değer görünür kalır; onaylanmış kayıtlarda geçmiş kararı göstermek için uygundur.", en: "`disabled` turns off the whole group. The chosen value stays visible, which suits showing a past decision on approved records." },
-      example: { Demo: DisabledGroup, code: `<RadioGroup aria-label="Approval flow" disabled defaultValue="two" options={FLOWS} />` },
+      example: { Demo: DisabledGroup, code: `<Field label="Approval flow">\n  <RadioGroup disabled defaultValue="two" options={FLOWS} />\n</Field>` },
     },
     {
       id: "validation",
       title: { tr: "Hata", en: "Error" },
-      body: { tr: "Hata iletisi için `Field` kullanın ama `label` vermeyin; görünür başlığı ayrı yazın, adı `aria-label` ile verin. Hata yalnız metin olarak görünür, daireler kırmızıya dönmez. Bir seçenek seçince hata kalkar.", en: "Use `Field` for the error message but leave out `label`; write the visible title separately and pass the name through `aria-label`. The error shows as text only, the circles do not turn red. Choose an option to clear it." },
+      body: { tr: "`Field` hem başlığı hem hata iletisini verir. Hata yalnız metin olarak görünür, daireler kırmızıya dönmez. Bir seçenek seçince hata kalkar.", en: "`Field` gives both the caption and the error message. The error shows as text only, the circles do not turn red. Choose an option to clear it." },
       example: {
         Demo: Validation,
-        code: `<span className="bt-label">Payment term</span>
-<Field error={term ? undefined : "Choose a term"}>
-  <RadioGroup aria-label="Payment term" orientation="horizontal" value={term} onChange={setTerm} options={TERMS} />
+        code: `<Field label="Payment term" error={term ? undefined : "Choose a term"}>
+  <RadioGroup orientation="horizontal" value={term} onChange={setTerm} options={TERMS} />
 </Field>`,
+      },
+    },
+    {
+      id: "required",
+      title: { tr: "Zorunlu seçim", en: "Required choice" },
+      body: { tr: "`required` tarayıcıya seçim yapılmadan formu göndermemesini söyler. Seçim yapmadan göndermeyi deneyin. `name` seçilen `value` değerini forma ekler.", en: "`required` tells the browser not to submit the form until a choice is made. Try submitting without one. `name` adds the chosen `value` to the form." },
+      example: {
+        Demo: Required,
+        code: `<form onSubmit={submit}>
+  <Field label="Invoice currency">
+    <RadioGroup required name="currency" orientation="horizontal" options={CURRENCIES} />
+  </Field>
+  <Button type="submit" variant="primary">Submit</Button>
+</form>`,
+      },
+    },
+    {
+      id: "standalone",
+      title: { tr: "Field olmadan", en: "Without Field" },
+      body: { tr: "`Field` kullanmıyorsanız grubu `aria-label` ile adlandırın. Başlık ekranda görünüyorsa `aria-labelledby` ile o öğeye bağlayın, metin iki kez yazılmamış olur.", en: "Without `Field`, name the group with `aria-label`. If a caption is on screen, link to it with `aria-labelledby`, so the text is not written twice." },
+      example: {
+        Demo: Standalone,
+        code: `<b id="delivery-time">Delivery time</b>
+<RadioGroup aria-labelledby="delivery-time" orientation="horizontal" defaultValue="morning" options={TIMES} />`,
       },
     },
   ],
   a11y: [
-    { tr: "`radiogroup` ve `radio` rolleri hazır gelir. Gruba `aria-label` ile ad verin; `Field` etiketi bu bileşen için uygun değildir.", en: "The `radiogroup` and `radio` roles come built in. Name the group with `aria-label`; a `Field` label does not suit this component." },
+    { tr: "`radiogroup` ve `radio` rolleri hazır gelir. `Field` etiketi grubun adı olur, seçenekler kendi adlarını korur ve kimlikleri benzersiz kalır. Grup `Field` öğesinin doğrudan çocuğu olmalıdır. `Field` yoksa `aria-label` ya da `aria-labelledby` verin.", en: "The `radiogroup` and `radio` roles come built in. The `Field` label names the group, while the options keep their own names and unique ids. The group must be a direct child of `Field`. Without `Field`, pass `aria-label` or `aria-labelledby`." },
     { tr: "Her seçenek bir `label` içinde durur; daire, metin ve `hint` tek tıklama alanıdır.", en: "Each option sits inside a `label`, so the circle, text and `hint` form one click target." },
     { tr: "`hint` seçeneğin adına dahil olur ve ekran okuyucu tarafından birlikte okunur; kısa tutun.", en: "`hint` is part of the option's name and is read along with it, so keep it short." },
   ],
@@ -240,8 +319,11 @@ export default definePage({
         { name: "onChange", type: "(value: string) => void", description: { tr: "Seçilen değeri bildirir", en: "Reports the chosen value" } },
         { name: "orientation", type: '"vertical" | "horizontal"', default: '"vertical"', description: { tr: "Yerleşim yönü", en: "Layout direction" } },
         { name: "disabled", type: "boolean", default: "false", description: { tr: "Grubun tamamını kapatır", en: "Turns off the whole group" } },
+        { name: "required", type: "boolean", default: "false", description: { tr: "Seçim yapılmadan formun gönderilmesini engeller", en: "Blocks form submission until a choice is made" } },
         { name: "name", type: "string", description: { tr: "Form gönderiminde kullanılan ad", en: "Name used on form submission" } },
-        { name: "aria-label", type: "string", description: { tr: "Grubun erişilebilir adı", en: "Accessible name of the group" } },
+        { name: "className", type: "string", description: { tr: "Gruba eklenen sınıf", en: "Class added to the group" } },
+        { name: "aria-label", type: "string", description: { tr: "`Field` yoksa grubun erişilebilir adı", en: "Accessible name of the group when there is no `Field`" } },
+        { name: "aria-labelledby", type: "string", description: { tr: "Grubu adlandıran öğenin kimliği; `label` taşıyan `Field` içinde bu değeri kendisi yazar", en: "Id of the element that names the group; a `Field` with `label` sets it for you" } },
       ],
     },
     {

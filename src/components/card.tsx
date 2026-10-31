@@ -31,8 +31,8 @@ export type KpiProps = {
   label: ReactNode;
   value: ReactNode;
   note?: ReactNode;
-  /** Change against the previous period, such as "+8%". */
-  trend?: { value: ReactNode; direction: "up" | "down" };
+  /** Change against the previous period. `good` sets the colour when falling is good news, such as for costs. */
+  trend?: { value: ReactNode; direction: "up" | "down"; good?: boolean };
   icon?: ReactNode;
   /** Colours the number only. The card itself stays neutral. */
   tone?: "neutral" | "ok" | "warn" | "danger";
@@ -47,7 +47,7 @@ export function Kpi({ label, value, note, trend, icon, tone = "neutral", onClick
       <b className="bt-kpi-value">{value}</b>
       {note !== undefined || trend ? (
         <small className="bt-kpi-note">
-          {trend ? <span className="bt-kpi-trend" data-direction={trend.direction}>{trend.direction === "up" ? "↑" : "↓"} {trend.value}</span> : null}
+          {trend ? <span className="bt-kpi-trend" data-good={(trend.good ?? trend.direction === "up") ? "true" : "false"}>{trend.direction === "up" ? "↑" : "↓"} {trend.value}</span> : null}
           {note}
         </small>
       ) : null}
