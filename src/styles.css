@@ -18,6 +18,9 @@
   --bt-head: #f8f9fb;
   --bt-head-border: #dadfe7;
   --bt-neutral-soft: #eceff5;
+  --bt-toast-bg: #182130;
+  --bt-toast-text: #ffffff;
+  --bt-toast-muted: #b7c1d1;
   --bt-text: #171d29;
   --bt-text-2: #414b5d;
   --bt-muted: #667085;
@@ -58,6 +61,7 @@
   --bt-head: #283142;
   --bt-head-border: #3e4b60;
   --bt-neutral-soft: #2d3747;
+  --bt-toast-bg: #303b4e;
   --bt-text: #e7ebf2;
   --bt-text-2: #c1c9d6;
   --bt-muted: #98a3b5;
@@ -308,16 +312,23 @@ button.bt-kpi:hover { border-color: var(--bt-accent); box-shadow: 0 2px 10px rgb
 .bt-menu-item[data-disabled] { opacity: .45; cursor: not-allowed; }
 .bt-menu-sep { height: 1px; margin: 4px 2px; background: var(--bt-border); }
 .bt-tooltip { max-width: 280px; padding: 5px 8px; border-radius: var(--bt-radius); background: var(--bt-nav); color: #fff; font-size: 12px; line-height: 1.35; transform-origin: var(--transform-origin); transition: opacity var(--bt-fast), transform var(--bt-fast) var(--bt-ease); }
-.bt-toasts { position: fixed; z-index: 70; right: 16px; bottom: 16px; display: flex; flex-direction: column; gap: 8px; width: min(340px, calc(100vw - 32px)); outline: 0; }
-.bt-toast { position: relative; padding: 10px 34px 10px 14px; border: 1px solid var(--bt-border); border-left: 3px solid var(--bt-accent); border-radius: var(--bt-radius); background: var(--bt-surface); box-shadow: var(--bt-shadow-pop); transition: opacity var(--bt-slow), transform var(--bt-slow) var(--bt-ease); }
+.bt-toasts { position: fixed; z-index: 70; right: 16px; bottom: 16px; display: flex; flex-direction: column; gap: 8px; width: min(360px, calc(100vw - 32px)); outline: 0; }
+.bt-toast { --bt-toast-tone: #8fb0dc; position: relative; border-radius: var(--bt-radius); background: var(--bt-toast-bg); color: var(--bt-toast-text); box-shadow: var(--bt-shadow-pop); transition: opacity var(--bt-slow), transform var(--bt-slow) var(--bt-ease); }
 .bt-toast:is([data-starting-style], [data-ending-style]) { opacity: 0; transform: translateX(16px); }
 .bt-toast[data-limited] { display: none; }
-.bt-toast[data-type="ok"] { border-left-color: var(--bt-ok); }
-.bt-toast[data-type="warn"] { border-left-color: var(--bt-warn); }
-.bt-toast[data-type="danger"] { border-left-color: var(--bt-danger); }
-.bt-toast-title { margin: 0; font-size: 13px; font-weight: 700; }
-.bt-toast-text { margin: 2px 0 0; font-size: 12.5px; color: var(--bt-text-2); }
-.bt-toast .bt-icon-btn { position: absolute; top: 6px; right: 6px; }
+.bt-toast[data-type="ok"] { --bt-toast-tone: #62c99c; }
+.bt-toast[data-type="warn"] { --bt-toast-tone: #efa56b; }
+.bt-toast[data-type="danger"] { --bt-toast-tone: #f28b82; }
+.bt-toast-body { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 8px 8px 12px; }
+.bt-toast-icon { display: inline-flex; flex-shrink: 0; color: var(--bt-toast-tone); }
+.bt-toast-main { flex: 1; min-width: 0; }
+.bt-toast-title { margin: 0; font-size: 13px; line-height: 1.35; font-weight: 600; }
+.bt-toast-text { margin: 1px 0 0; font-size: 12.5px; line-height: 1.4; color: var(--bt-toast-muted); }
+.bt-toast .bt-toast-action { flex-shrink: 0; height: 26px; padding: 0 8px; border: 0; border-radius: var(--bt-radius); background: transparent; color: #a9c6ee; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.bt-toast .bt-toast-action:hover { background: rgba(255, 255, 255, .1); color: #fff; }
+.bt-toast-action:focus-visible, .bt-toast .bt-icon-btn:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
+.bt-toast .bt-icon-btn { flex-shrink: 0; color: var(--bt-toast-muted); }
+.bt-toast .bt-icon-btn:hover { background: rgba(255, 255, 255, .1); color: #fff; }
 .bt-columns { display: flex; flex-direction: column; width: 250px; max-height: 70vh; border: 1px solid var(--bt-border); border-radius: var(--bt-radius-lg); background: var(--bt-surface); box-shadow: var(--bt-shadow-pop); outline: 0; }
 .bt-columns-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 11px 14px 9px; border-bottom: 1px solid var(--bt-border); }
 .bt-columns-head b { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--bt-text-2); }

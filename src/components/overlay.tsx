@@ -5,7 +5,7 @@ import { Drawer as BaseDrawer } from "@base-ui/react/drawer";
 import { Menu as BaseMenu } from "@base-ui/react/menu";
 import { Toast } from "@base-ui/react/toast";
 import { Tooltip as BaseTooltip } from "@base-ui/react/tooltip";
-import { Close } from "../icons";
+import { CheckCircle, Close, ErrorCircle, InfoCircle, WarnTriangle } from "../icons";
 import { en, LocaleContext, tr, useLocale, type BtuiLocale } from "../locale";
 import { cx, flag } from "../utils";
 import { Button, IconButton } from "./button";
@@ -207,16 +207,36 @@ export type ToastOptions = {
   tone?: "info" | "ok" | "warn" | "danger";
   /** Milliseconds. 0 keeps it until dismissed. */
   timeout?: number;
+  /** A button on the toast, such as "Undo". Pressing it also closes the toast. */
+  action?: { label: string; onClick: () => void };
 };
 
 /** Returns a function that shows a toast and gives back its id. */
 export function useToast() {
   const manager = Toast.useToastManager();
   return useCallback(
-    ({ title, description, tone = "info", timeout }: ToastOptions) => manager.add({ title, description, type: tone, timeout }),
+    ({ title, description, tone = "info", timeout, action }: ToastOptions) => {
+      const id: string = manager.add({
+        title,
+        description,
+        type: tone,
+        timeout,
+        actionProps: action
+          ? { children: action.label, onClick: () => { action.onClick(); manager.close(id); } }
+          : undefined,
+      });
+      return id;
+    },
     [manager],
   );
 }
+
+const TOAST_ICONS = {
+  ok: <CheckCircle size={18} />,
+  warn: <WarnTriangle size={18} />,
+  danger: <ErrorCircle size={18} />,
+  info: <InfoCircle size={18} />,
+};
 
 function ToastList() {
   const t = useLocale();
@@ -226,10 +246,14 @@ function ToastList() {
       <Toast.Viewport className="bt-popup bt-toasts" aria-label={t.notifications}>
         {toasts.map((toast) => (
           <Toast.Root key={toast.id} toast={toast} className="bt-toast" data-type={toast.type}>
-            <Toast.Content>
-              <Toast.Title className="bt-toast-title" />
-              <Toast.Description className="bt-toast-text" />
-              <Toast.Close render={<IconButton label={t.close} size="sm"><Close size={13} /></IconButton>} />
+            <Toast.Content className="bt-toast-body">
+              <span className="bt-toast-icon">{TOAST_ICONS[toast.type as keyof typeof TOAST_ICONS] ?? <InfoCircle size={18} />}</span>
+              <div className="bt-toast-main">
+                <Toast.Title className="bt-toast-title" />
+                <Toast.Description className="bt-toast-text" />
+              </div>
+              {toast.actionProps ? <Toast.Action className="bt-toast-action" /> : null}
+              <Toast.Close render={<IconButton label={t.close} size="sm"><Close size={14} /></IconButton>} />
             </Toast.Content>
           </Toast.Root>
         ))}

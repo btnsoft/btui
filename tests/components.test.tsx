@@ -2,7 +2,7 @@ import { useState } from "react";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { Accordion, Alert, Avatar, BtuiProvider, Button, DataTable, Sidebar, Tabs, Field, FileDropzone, Input, Modal, MultiSelect, NumberInput, RadioGroup, Select, Switch, pageRange, sortRows, useConfirm, type Column } from "../src";
+import { useToast, Accordion, Alert, Avatar, BtuiProvider, Button, DataTable, Sidebar, Tabs, Field, FileDropzone, Input, Modal, MultiSelect, NumberInput, RadioGroup, Select, Switch, pageRange, sortRows, useConfirm, type Column } from "../src";
 import { fileMatchesAccept, includesText } from "../src/utils";
 
 type Row = { id: number; name: string; km: number | null };
@@ -339,5 +339,22 @@ describe("0.2 fixes", () => {
   it("Avatar names itself and upper-cases by locale", () => {
     render(<BtuiProvider><Avatar name="ipek ince" /></BtuiProvider>);
     expect(screen.getByRole("img", { name: "ipek ince" })).toHaveTextContent("İİ");
+  });
+});
+
+describe("toast", () => {
+  function Demo({ onUndo }: { onUndo: () => void }) {
+    const toast = useToast();
+    return <button onClick={() => toast({ title: "Arşivlendi", tone: "ok", action: { label: "Geri al", onClick: onUndo } })}>göster</button>;
+  }
+
+  it("runs its action and closes", async () => {
+    const user = userEvent.setup();
+    const onUndo = vi.fn();
+    render(<BtuiProvider><Demo onUndo={onUndo} /></BtuiProvider>);
+    await user.click(screen.getByText("göster"));
+    await user.click(await screen.findByRole("button", { name: "Geri al" }));
+    expect(onUndo).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.queryByText("Arşivlendi")).toBeNull());
   });
 });

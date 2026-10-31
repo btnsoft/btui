@@ -51,6 +51,22 @@ function Duration() {
   );
 }
 
+function Undo() {
+  const t = useText();
+  const toast = useToast();
+  const [count, setCount] = useState(3);
+  const archive = () => {
+    setCount((n) => n - 1);
+    toast({
+      title: t({ tr: "Fatura arşivlendi", en: "Invoice archived" }),
+      tone: "ok",
+      timeout: 8000,
+      action: { label: t({ tr: "Geri al", en: "Undo" }), onClick: () => setCount((n) => n + 1) },
+    });
+  };
+  return <Button disabled={count === 0} onClick={archive}>{t({ tr: `Arşivle (${count} fatura)`, en: `Archive (${count} invoices)` })}</Button>;
+}
+
 function AfterSave() {
   const t = useText();
   const toast = useToast();
@@ -138,6 +154,20 @@ toast({ title: "Month end closing finished", timeout: 10000 });`,
       },
     },
     {
+      id: "undo",
+      title: { tr: "Geri alma", en: "Undo" },
+      body: { tr: "`action`, sonucu kolay geri çevrilen işlemlerde onay penceresinden daha iyidir: kullanıcıyı durdurmaz, hata yaparsa düzeltme şansı verir. Geri alma için süreyi uzatın. Geri alınamayan işlemlerde `useConfirm` kullanın.", en: "`action` beats a confirm dialog when a result is easy to reverse: it does not stop people and still lets them fix a mistake. Give undo a longer timeout. Use `useConfirm` when work cannot be reversed." },
+      example: {
+        Demo: Undo,
+        code: `toast({
+  title: "Invoice archived",
+  tone: "ok",
+  timeout: 8000,
+  action: { label: "Undo", onClick: restore },
+});`,
+      },
+    },
+    {
       id: "after-save",
       title: { tr: "Kayıttan sonra", en: "After saving" },
       body: { tr: "En yaygın akış budur: düğme `loading` ile bekler, sunucu yanıt verince bildirim çıkar. Bildirimi işlem başlarken değil, sonuç belli olunca gösterin.", en: "This is the most common flow: the button waits with `loading` and the notice appears when the server responds. Show it when the result is known, not when the work starts." },
@@ -176,7 +206,8 @@ const approve = async () => {
       props: [
         { name: "title", type: "ReactNode", description: { tr: "Kalın başlık satırı", en: "Bold heading line" } },
         { name: "description", type: "ReactNode", description: { tr: "Başlığın altındaki ayrıntı", en: "Detail below the title" } },
-        { name: "tone", type: '"info" | "ok" | "warn" | "danger"', default: '"info"', description: { tr: "Sol kenar rengi", en: "Left edge colour" } },
+        { name: "tone", type: '"info" | "ok" | "warn" | "danger"', default: '"info"', description: { tr: "İkon ve ikon rengi", en: "Icon and its colour" } },
+        { name: "action", type: "{ label: string; onClick: () => void }", description: { tr: "Bildirimdeki düğme, örn. Geri al. Basınca bildirim de kapanır", en: "A button on the toast, such as Undo. Pressing it also closes the toast" } },
         { name: "timeout", type: "number", default: "5000", description: { tr: "Milisaniye. `0` kullanıcı kapatana kadar tutar", en: "Milliseconds. `0` keeps it until the user closes it" } },
       ],
     },
