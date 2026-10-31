@@ -67,7 +67,6 @@ body { margin: 0; position: relative; background: var(--bt-surface); }
 .d-toc button:hover { color: var(--bt-text); }
 .d-toc button[data-active] { border-left-color: var(--bt-accent-strong); color: var(--bt-text); font-weight: 600; }
 .d-mark { display: grid; place-items: center; width: 26px; height: 26px; border-radius: var(--bt-radius); background: var(--bt-accent-strong); color: #fff; font-size: 13px; text-decoration: none; }
-.d-loading { display: grid; gap: 10px; }
 .bt-logo { font-size: 16px; }
 @media (max-width: 1180px) { .d-layout { grid-template-columns: minmax(0, 1fr); } .d-toc { display: none; } }
 @media (max-width: 800px) { .d-layout { padding: 24px 16px 48px; } .d-h1 { font-size: 28px; } .d-dodont { grid-template-columns: 1fr; } .d-stage { padding: 52px 16px 24px; } }

@@ -1,6 +1,6 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from "react";
+import { lazy, startTransition, Suspense, useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { IconBrandGithub, IconMoon, IconSun } from "@tabler/icons-react";
-import { AppShell, Button, ButtonGroup, IconButton, Kbd, Page, Sidebar, Skeleton, Topbar, TopbarSearch, TopbarSpacer, Tooltip, type NavGroup } from "btui";
+import { AppShell, Button, ButtonGroup, IconButton, Kbd, Page, Sidebar, Topbar, TopbarSearch, TopbarSpacer, Tooltip, type NavGroup } from "btui";
 import { LangContext, useText, type Lang } from "./lib/i18n";
 import { GUIDE_IDS, NAV, PAGES } from "./lib/nav";
 import { ComponentPage } from "./lib/ComponentPage";
@@ -35,6 +35,18 @@ function Body({ summary, children }: { summary: PageContent["summary"]; children
   );
 }
 
+/** Fetches every page once the browser is idle, so moving between pages is instant. */
+function preloadPages() {
+  const loaders = [...Object.values(componentFiles), ...Object.values(guideFiles)];
+  const next = () => {
+    const load = loaders.shift();
+    if (!load) return;
+    void load().catch(() => undefined).finally(() => setTimeout(next, 0));
+  };
+  if ("requestIdleCallback" in window) requestIdleCallback(next);
+  else setTimeout(next, 500);
+}
+
 function readRoute() {
   const [, first, second] = location.hash.split("/");
   const known = first === "tr" || first === "en";
@@ -62,8 +74,11 @@ export function App({ onLang }: { onLang: (lang: Lang) => void }) {
   const search = useRef<HTMLInputElement>(null);
   const t = (x: string | { tr: string; en: string }) => (typeof x === "string" ? x : x[lang]);
 
+  useEffect(preloadPages, []);
+
   useEffect(() => {
-    const onHash = () => setRoute(readRoute());
+    // In a transition the current page stays on screen until the next one has loaded.
+    const onHash = () => startTransition(() => setRoute(readRoute()));
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
@@ -137,12 +152,11 @@ export function App({ onLang }: { onLang: (lang: Lang) => void }) {
       >
         <Page className="d-page">
           <div className="d-layout" data-home={route.id === "home" ? "" : undefined}>
+            <Suspense fallback={null}>
             <article className="d-article" key={`${route.id}-${lang}`}>
               {page ? <div className="d-eyebrow">{t(page.section)}</div> : null}
               {page ? <h1 className="d-h1">{t(page.title)}</h1> : null}
-              <Suspense fallback={<div className="d-loading"><Skeleton width="70%" /><Skeleton /><Skeleton height={200} /></div>}>
-                {Content ? <Content /> : <p className="d-lead">{t({ tr: "Sayfa bulunamadı.", en: "Page not found." })}</p>}
-              </Suspense>
+              {Content ? <Content /> : <p className="d-lead">{t({ tr: "Sayfa bulunamadı.", en: "Page not found." })}</p>}
               {page ? (
                 <nav className="d-pager">
                   {prev ? <a href={`#/${lang}/${prev.id}`}><small>{t({ tr: "Önceki", en: "Previous" })}</small>{t(prev.title)}</a> : <span />}
@@ -150,6 +164,7 @@ export function App({ onLang }: { onLang: (lang: Lang) => void }) {
                 </nav>
               ) : null}
             </article>
+            </Suspense>
             {page ? <Toc pageKey={`${route.id}-${lang}`} /> : null}
           </div>
         </Page>
