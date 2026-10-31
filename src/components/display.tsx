@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef, ReactNode } from "react";
+import { forwardRef, type ComponentPropsWithoutRef, type ReactNode } from "react";
 import { Avatar as BaseAvatar } from "@base-ui/react/avatar";
 import { useLocale } from "../locale";
 import { cx, flag, type Tone } from "../utils";
@@ -9,7 +9,7 @@ export function Badge({ tone = "neutral", className, ...rest }: BadgeProps) {
   return <span className={cx("bt-badge", className)} data-tone={tone} {...rest} />;
 }
 
-export type StatusProps = ComponentPropsWithoutRef<"span"> & { tone?: "neutral" | "ok" | "warn" | "danger" | "muted" };
+export type StatusProps = ComponentPropsWithoutRef<"span"> & { tone?: Tone | "muted" };
 
 export function Status({ tone = "neutral", className, ...rest }: StatusProps) {
   return <span className={cx("bt-status", className)} data-tone={tone} {...rest} />;
@@ -18,7 +18,7 @@ export function Status({ tone = "neutral", className, ...rest }: StatusProps) {
 export type ChipProps = Omit<ComponentPropsWithoutRef<"button">, "type"> & {
   active?: boolean;
   count?: ReactNode;
-  /** Solid status colour. Only applied inside a DataTable band. */
+  /** Status colour: a dot on the chip, a solid fill in an accent DataTable band. */
   tone?: Tone;
 };
 
@@ -39,17 +39,18 @@ export function Kbd({ className, ...rest }: ComponentPropsWithoutRef<"kbd">) {
   return <kbd className={cx("bt-kbd", className)} {...rest} />;
 }
 
-export type AvatarProps = { name: string; src?: string; size?: number; className?: string };
+export type AvatarProps = Omit<ComponentPropsWithoutRef<typeof BaseAvatar.Root>, "children" | "className"> & { name: string; src?: string; size?: number; className?: string };
 
-export function Avatar({ name, src, size, className }: AvatarProps) {
-  const initials = name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toLocaleUpperCase();
+export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar({ name, src, size, className, ...rest }, ref) {
+  const t = useLocale();
+  const initials = name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toLocaleUpperCase(t.lang);
   return (
-    <BaseAvatar.Root className={cx("bt-avatar", className)} style={size ? { width: size, height: size, fontSize: size * 0.38 } : undefined}>
+    <BaseAvatar.Root ref={ref} role="img" aria-label={name} className={cx("bt-avatar", className)} style={size ? { width: size, height: size, fontSize: size * 0.38 } : undefined} {...rest}>
       {src ? <BaseAvatar.Image src={src} alt={name} /> : null}
       <BaseAvatar.Fallback>{initials}</BaseAvatar.Fallback>
     </BaseAvatar.Root>
   );
-}
+});
 
 export function Spinner({ size, label }: { size?: number; label?: string }) {
   const t = useLocale();

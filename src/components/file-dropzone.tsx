@@ -45,10 +45,10 @@ export function FileDropzone({ files, onChange, accept, multiple, maxSize, disab
   }
 
   return (
-    <div className={cx("bt-drop", className)} data-dragging={flag(dragging)}>
+    <div className={cx("bt-drop", className)} data-dragging={flag(dragging)} data-disabled={flag(disabled)}>
       <label
         className="bt-drop-box"
-        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragOver={(e) => { e.preventDefault(); if (!disabled) setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
       >
@@ -73,7 +73,7 @@ export function FileDropzone({ files, onChange, accept, multiple, maxSize, disab
             <li key={`${file.name}-${i}`}>
               <span>{file.name}</span>
               <small>{formatBytes(file.size, t.lang)}</small>
-              <IconButton size="sm" label={`${t.remove}: ${file.name}`} onClick={() => onChange(files.filter((_, n) => n !== i))}><Close size={13} /></IconButton>
+              <IconButton size="sm" disabled={disabled} label={`${t.remove}: ${file.name}`} onClick={() => onChange(files.filter((_, n) => n !== i))}><Close size={13} /></IconButton>
             </li>
           ))}
         </ul>

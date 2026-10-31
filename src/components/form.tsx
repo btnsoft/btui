@@ -2,6 +2,9 @@ import { forwardRef, useId, type ComponentPropsWithoutRef, type ReactNode } from
 import { Checkbox as BaseCheckbox } from "@base-ui/react/checkbox";
 import { Field as BaseField } from "@base-ui/react/field";
 import { Input as BaseInput } from "@base-ui/react/input";
+import { NumberField } from "@base-ui/react/number-field";
+import { Radio } from "@base-ui/react/radio";
+import { RadioGroup as BaseRadioGroup } from "@base-ui/react/radio-group";
 import { Switch as BaseSwitch } from "@base-ui/react/switch";
 import { Check, Search } from "../icons";
 import { useLocale } from "../locale";
@@ -31,11 +34,102 @@ export function Field({ label, hint, error, name, className, children }: FieldPr
   );
 }
 
-export type InputProps = ComponentPropsWithoutRef<typeof BaseInput> & { className?: string };
+export type InputProps = Omit<ComponentPropsWithoutRef<typeof BaseInput>, "prefix"> & {
+  className?: string;
+  /** Fixed content before the value, such as a currency sign. */
+  prefix?: ReactNode;
+  /** Fixed content after the value, such as a unit. */
+  suffix?: ReactNode;
+};
 
-export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({ className, ...rest }, ref) {
-  return <BaseInput ref={ref} className={cx("bt-input", className)} {...rest} />;
+export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({ className, prefix, suffix, ...rest }, ref) {
+  const input = <BaseInput ref={ref} className={cx("bt-input", className)} {...rest} />;
+  if (!prefix && !suffix) return input;
+  return (
+    <span className="bt-input-wrap">
+      {prefix ? <span className="bt-adorn">{prefix}</span> : null}
+      {input}
+      {suffix ? <span className="bt-adorn">{suffix}</span> : null}
+    </span>
+  );
 });
+
+export type NumberInputProps = {
+  value?: number | null;
+  defaultValue?: number;
+  onChange?: (value: number | null) => void;
+  min?: number;
+  max?: number;
+  step?: number;
+  /** `Intl.NumberFormat` options, such as `{ style: "currency", currency: "TRY" }`. */
+  format?: Intl.NumberFormatOptions;
+  /** Hides the minus and plus buttons. */
+  hideSteppers?: boolean;
+  disabled?: boolean;
+  name?: string;
+  "aria-label"?: string;
+};
+
+export function NumberInput({ value, defaultValue, onChange, min, max, step, format, hideSteppers, disabled, name, "aria-label": ariaLabel }: NumberInputProps) {
+  const t = useLocale();
+  return (
+    <NumberField.Root
+      value={value}
+      defaultValue={defaultValue}
+      onValueChange={(next) => onChange?.(next)}
+      min={min}
+      max={max}
+      step={step}
+      format={format}
+      locale={t.lang}
+      disabled={disabled}
+      name={name}
+    >
+      <NumberField.Group className="bt-input-wrap">
+        {hideSteppers ? null : <NumberField.Decrement className="bt-number-btn" aria-label={t.decrease}>−</NumberField.Decrement>}
+        <NumberField.Input className="bt-input bt-number" aria-label={ariaLabel} />
+        {hideSteppers ? null : <NumberField.Increment className="bt-number-btn" aria-label={t.increase}>+</NumberField.Increment>}
+      </NumberField.Group>
+    </NumberField.Root>
+  );
+}
+
+export type RadioOption = { value: string; label: ReactNode; hint?: ReactNode; disabled?: boolean };
+
+export type RadioGroupProps = {
+  options: RadioOption[];
+  value?: string;
+  defaultValue?: string;
+  onChange?: (value: string) => void;
+  orientation?: "vertical" | "horizontal";
+  disabled?: boolean;
+  name?: string;
+  "aria-label"?: string;
+};
+
+export function RadioGroup({ options, value, defaultValue, onChange, orientation = "vertical", disabled, name, "aria-label": ariaLabel }: RadioGroupProps) {
+  return (
+    <BaseRadioGroup
+      value={value}
+      defaultValue={defaultValue}
+      onValueChange={(next) => onChange?.(next as string)}
+      disabled={disabled}
+      name={name}
+      aria-label={ariaLabel}
+      className="bt-radios"
+      data-orientation={orientation}
+    >
+      {options.map((option) => (
+        <label key={option.value} className="bt-radio-wrap">
+          <Radio.Root value={option.value} disabled={option.disabled} className="bt-radio">
+            <Radio.Indicator className="bt-radio-dot" />
+          </Radio.Root>
+          <span>{option.label}{option.hint ? <small>{option.hint}</small> : null}</span>
+        </label>
+      ))}
+    </BaseRadioGroup>
+  );
+}
 
 export type TextareaProps = ComponentPropsWithoutRef<"textarea">;
 

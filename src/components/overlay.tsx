@@ -18,17 +18,19 @@ export type ModalProps = {
   title: ReactNode;
   size?: keyof typeof MODAL_WIDTHS;
   footer?: ReactNode;
+  /** `accent` fills the header with the brand colour. */
+  tone?: "plain" | "accent";
   children: ReactNode;
   className?: string;
 };
 
-export function Modal({ open, onClose, title, size = "md", footer, children, className }: ModalProps) {
+export function Modal({ open, onClose, title, size = "md", footer, tone = "plain", children, className }: ModalProps) {
   const t = useLocale();
   return (
     <Dialog.Root open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
       <Dialog.Portal>
         <Dialog.Backdrop className="bt-scrim" />
-        <Dialog.Popup className={cx("bt-popup bt-modal", className)} style={{ "--bt-modal-width": `${MODAL_WIDTHS[size]}px` } as CSSProperties}>
+        <Dialog.Popup className={cx("bt-popup bt-modal", className)} data-tone={tone} style={{ "--bt-modal-width": `${MODAL_WIDTHS[size]}px` } as CSSProperties}>
           <div className="bt-modal-head">
             <Dialog.Title className="bt-modal-title">{title}</Dialog.Title>
             <Dialog.Close render={<IconButton label={t.close}><Close size={16} /></IconButton>} />
@@ -221,7 +223,7 @@ function ToastList() {
   const { toasts } = Toast.useToastManager();
   return (
     <Toast.Portal>
-      <Toast.Viewport className="bt-popup bt-toasts">
+      <Toast.Viewport className="bt-popup bt-toasts" aria-label={t.notifications}>
         {toasts.map((toast) => (
           <Toast.Root key={toast.id} toast={toast} className="bt-toast" data-type={toast.type}>
             <Toast.Content>

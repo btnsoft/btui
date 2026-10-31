@@ -1,10 +1,10 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ComponentPropsWithoutRef, type MouseEvent, type MouseEventHandler, type ReactElement, type ReactNode } from "react";
+import { createContext, forwardRef, useCallback, useContext, useEffect, useMemo, useState, type ComponentPropsWithoutRef, type MouseEvent, type MouseEventHandler, type ReactElement, type ReactNode } from "react";
 import { ChevronRight, Filter, Menu as MenuIcon, Search } from "../icons";
 import { useLocale } from "../locale";
 import { cx, flag, storageGet, storageSet } from "../utils";
 import { IconButton } from "./button";
 
-type ShellState = { toggle: () => void; closeNav: () => void };
+type ShellState = { toggle: () => void; closeNav: () => void; navOpen: boolean };
 const ShellContext = createContext<ShellState | null>(null);
 const MOBILE = "(max-width: 800px)";
 
@@ -44,7 +44,15 @@ export function AppShell({ sidebar, topbar, collapsed, defaultCollapsed = false,
   }, [isCollapsed, onCollapsedChange, storageKey]);
 
   const closeNav = useCallback(() => setNavOpen(false), []);
-  const state = useMemo(() => ({ toggle, closeNav }), [toggle, closeNav]);
+
+  useEffect(() => {
+    if (!navOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setNavOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [navOpen]);
+
+  const state = useMemo(() => ({ toggle, closeNav, navOpen }), [toggle, closeNav, navOpen]);
 
   return (
     <ShellContext.Provider value={state}>
@@ -75,14 +83,16 @@ export type SidebarProps = {
   logo?: ReactNode;
   logoText?: ReactNode;
   groups: NavGroup[];
+  /** `light` for apps that prefer a white rail. */
+  tone?: "dark" | "light";
   /** Plug in your router's link. Receives the anchor props to spread. */
   renderLink?: (props: ComponentPropsWithoutRef<"a"> & { "data-active"?: string }, item: NavItem) => ReactElement;
 };
 
-export function Sidebar({ logo, logoText, groups, renderLink }: SidebarProps) {
+export function Sidebar({ logo, logoText, groups, tone = "dark", renderLink }: SidebarProps) {
   const shell = useContext(ShellContext);
   return (
-    <aside className="bt-side">
+    <aside className="bt-side" data-tone={tone}>
       {logo || logoText ? (
         <div className="bt-logo">
           {logo}
@@ -109,6 +119,10 @@ export function Sidebar({ logo, logoText, groups, renderLink }: SidebarProps) {
                   </>
                 ),
               };
+              if (!item.href && !renderLink) {
+                const { href: _href, ...button } = props;
+                return <button key={item.label} type="button" {...(button as unknown as ComponentPropsWithoutRef<"button">)} />;
+              }
               return <span key={item.label}>{renderLink ? renderLink(props, item) : <a {...props} />}</span>;
             })}
           </div>
@@ -123,7 +137,7 @@ export function Topbar({ className, children, ...rest }: ComponentPropsWithoutRe
   const shell = useContext(ShellContext);
   return (
     <header className={cx("bt-top", className)} {...rest}>
-      {shell ? <IconButton label={t.menu} onClick={shell.toggle}><MenuIcon size={18} /></IconButton> : null}
+      {shell ? <IconButton label={t.menu} aria-expanded={shell.navOpen} onClick={shell.toggle}><MenuIcon size={18} /></IconButton> : null}
       {children}
     </header>
   );
@@ -132,22 +146,25 @@ export function Topbar({ className, children, ...rest }: ComponentPropsWithoutRe
 export const TopbarSpacer = () => <div className="bt-top-space" />;
 export const TopbarSeparator = () => <div className="bt-top-sep" />;
 
-export function TopbarSearch({ shortcut, placeholder, ...rest }: Omit<ComponentPropsWithoutRef<"input">, "type"> & { shortcut?: ReactNode }) {
+export type TopbarSearchProps = Omit<ComponentPropsWithoutRef<"input">, "type"> & { shortcut?: ReactNode };
+
+export const TopbarSearch = forwardRef<HTMLInputElement, TopbarSearchProps>(function TopbarSearch({ shortcut, placeholder, ...rest }, ref) {
   const t = useLocale();
   return (
     <label className="bt-top-search">
       <Search size={14} />
-      <input type="search" placeholder={placeholder ?? t.search} aria-label={placeholder ?? t.search} {...rest} />
+      <input ref={ref} type="search" placeholder={placeholder ?? t.search} aria-label={placeholder ?? t.search} {...rest} />
       {shortcut}
     </label>
   );
-}
+});
 
 export type Crumb = { label: ReactNode; href?: string };
 
 export function Breadcrumb({ items }: { items: Crumb[] }) {
+  const t = useLocale();
   return (
-    <nav aria-label="Breadcrumb">
+    <nav aria-label={t.breadcrumb}>
       <ol className="bt-crumbs">
         {items.map((item, i) => {
           const last = i === items.length - 1;

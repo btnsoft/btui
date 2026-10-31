@@ -6,14 +6,14 @@ export type CardProps = Omit<ComponentPropsWithoutRef<"section">, "title"> & {
   subtitle?: ReactNode;
   icon?: ReactNode;
   actions?: ReactNode;
-  /** Removes body padding, for a table or chart that fills the card. */
+  /** Removes body padding, for a chart or list that fills the card. */
   flush?: boolean;
 };
 
 export function Card({ title, subtitle, icon, actions, flush, className, children, ...rest }: CardProps) {
   return (
     <section className={cx("bt-card", className)} {...rest}>
-      {title || actions ? (
+      {title || subtitle || actions ? (
         <header className="bt-card-head">
           <div>
             {title ? <h2 className="bt-card-title">{icon}{title}</h2> : null}
@@ -31,6 +31,8 @@ export type KpiProps = {
   label: ReactNode;
   value: ReactNode;
   note?: ReactNode;
+  /** Change against the previous period, such as "+8%". */
+  trend?: { value: ReactNode; direction: "up" | "down" };
   icon?: ReactNode;
   /** Colours the number only. The card itself stays neutral. */
   tone?: "neutral" | "ok" | "warn" | "danger";
@@ -38,12 +40,17 @@ export type KpiProps = {
   className?: string;
 };
 
-export function Kpi({ label, value, note, icon, tone = "neutral", onClick, className }: KpiProps) {
+export function Kpi({ label, value, note, trend, icon, tone = "neutral", onClick, className }: KpiProps) {
   const body = (
     <>
       <span className="bt-kpi-label">{icon}{label}</span>
       <b className="bt-kpi-value">{value}</b>
-      {note !== undefined ? <small className="bt-kpi-note">{note}</small> : null}
+      {note !== undefined || trend ? (
+        <small className="bt-kpi-note">
+          {trend ? <span className="bt-kpi-trend" data-direction={trend.direction}>{trend.direction === "up" ? "↑" : "↓"} {trend.value}</span> : null}
+          {note}
+        </small>
+      ) : null}
     </>
   );
   return onClick ? (

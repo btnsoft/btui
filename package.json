@@ -1,7 +1,7 @@
 {
   "name": "btui",
-  "version": "0.1.0",
-  "description": "Dense, calm React components for data-heavy business apps. Built on Base UI.",
+  "version": "0.2.0",
+  "description": "Sharp, dense React components for business software. Built on Base UI.",
   "license": "MIT",
   "type": "module",
   "repository": {

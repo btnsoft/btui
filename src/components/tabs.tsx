@@ -17,13 +17,15 @@ export type TabsProps = {
   defaultValue?: string;
   onChange?: (value: string) => void;
   variant?: "line" | "chip";
+  /** Names the tab list for assistive technology. */
+  "aria-label"?: string;
   className?: string;
 };
 
-export function Tabs({ items, value, defaultValue, onChange, variant = "line", className }: TabsProps) {
+export function Tabs({ items, value, defaultValue, onChange, variant = "line", "aria-label": ariaLabel, className }: TabsProps) {
   return (
-    <BaseTabs.Root value={value} defaultValue={defaultValue ?? items[0]?.value} onValueChange={(next) => onChange?.(next as string)} className={className}>
-      <BaseTabs.List className="bt-tabs-list" data-variant={variant}>
+    <BaseTabs.Root value={value} defaultValue={defaultValue ?? items.find((tab) => !tab.disabled)?.value} onValueChange={(next) => onChange?.(next as string)} className={className}>
+      <BaseTabs.List className="bt-tabs-list" data-variant={variant} aria-label={ariaLabel}>
         {items.map((tab) => (
           <BaseTabs.Tab key={tab.value} value={tab.value} disabled={tab.disabled} className="bt-tab">
             {tab.icon}

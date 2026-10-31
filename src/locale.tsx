@@ -30,6 +30,12 @@ export type BtuiLocale = {
   fileRejected: (name: string) => string;
   fileTooLarge: (name: string) => string;
   remove: string;
+  increase: string;
+  decrease: string;
+  selectAll: string;
+  selectRow: string;
+  notifications: string;
+  breadcrumb: string;
 };
 
 export const tr: BtuiLocale = {
@@ -62,6 +68,12 @@ export const tr: BtuiLocale = {
   fileRejected: (name) => `${name}: bu dosya türü kabul edilmiyor`,
   fileTooLarge: (name) => `${name}: dosya çok büyük`,
   remove: "Kaldır",
+  increase: "Artır",
+  decrease: "Azalt",
+  selectAll: "Tümünü seç",
+  selectRow: "Satırı seç",
+  notifications: "Bildirimler",
+  breadcrumb: "Sayfa yolu",
 };
 
 export const en: BtuiLocale = {
@@ -94,6 +106,12 @@ export const en: BtuiLocale = {
   fileRejected: (name) => `${name}: file type not accepted`,
   fileTooLarge: (name) => `${name}: file is too large`,
   remove: "Remove",
+  increase: "Increase",
+  decrease: "Decrease",
+  selectAll: "Select all",
+  selectRow: "Select row",
+  notifications: "Notifications",
+  breadcrumb: "Breadcrumb",
 };
 
 export const LocaleContext = createContext<BtuiLocale>(tr);

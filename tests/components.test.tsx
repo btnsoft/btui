@@ -2,7 +2,7 @@ import { useState } from "react";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { BtuiProvider, DataTable, Field, FileDropzone, Input, Modal, MultiSelect, Select, Switch, pageRange, sortRows, useConfirm, type Column } from "../src";
+import { Accordion, Alert, Avatar, BtuiProvider, Button, DataTable, Sidebar, Tabs, Field, FileDropzone, Input, Modal, MultiSelect, NumberInput, RadioGroup, Select, Switch, pageRange, sortRows, useConfirm, type Column } from "../src";
 import { fileMatchesAccept, includesText } from "../src/utils";
 
 type Row = { id: number; name: string; km: number | null };
@@ -236,5 +236,108 @@ describe("form parts", () => {
     expect(onChange).toHaveBeenCalledWith([good]);
     expect(screen.getByText("b.pdf: dosya çok büyük")).toBeInTheDocument();
     expect(screen.getByText("c.exe: bu dosya türü kabul edilmiyor")).toBeInTheDocument();
+  });
+});
+
+describe("0.2 additions", () => {
+  it("loading Button blocks clicks and stays focusable", async () => {
+    const user = userEvent.setup();
+    const onClick = vi.fn();
+    render(<Button loading onClick={onClick}>Kaydet</Button>);
+    const button = screen.getByRole("button", { name: "Kaydet" });
+    expect(button).toHaveAttribute("aria-busy", "true");
+    await user.click(button);
+    expect(onClick).not.toHaveBeenCalled();
+    await user.tab();
+    expect(button).toHaveFocus();
+  });
+
+  it("DataTable selects a page, shows bulk actions and goes indeterminate", async () => {
+    const user = userEvent.setup();
+    const Demo = () => {
+      const [keys, setKeys] = useState<Array<string | number>>([]);
+      return <DataTable columns={columns} rows={rows} getRowKey={(r) => r.id} pageSize={2} selectedKeys={keys} onSelectionChange={setKeys} bulkActions={<Button>Sil</Button>} />;
+    };
+    render(<Demo />);
+    await user.click(screen.getByRole("checkbox", { name: "Tümünü seç" }));
+    expect(screen.getByText("2 seçili")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sil" })).toBeInTheDocument();
+    await user.click(screen.getAllByRole("checkbox", { name: "Satırı seç" })[0]);
+    expect(screen.getByText("1 seçili")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Tümünü seç" })).toHaveAttribute("aria-checked", "mixed");
+  });
+
+  it("row checkbox does not fire the row click", async () => {
+    const user = userEvent.setup();
+    const onRowClick = vi.fn();
+    render(<DataTable columns={columns} rows={rows.slice(0, 1)} getRowKey={(r) => r.id} onRowClick={onRowClick} selectedKeys={[]} onSelectionChange={() => {}} />);
+    await user.click(screen.getByRole("checkbox", { name: "Satırı seç" }));
+    expect(onRowClick).not.toHaveBeenCalled();
+  });
+
+  it("NumberInput formats for the locale and respects max", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<BtuiProvider><NumberInput aria-label="Tutar" defaultValue={1500} max={1501} onChange={onChange} /></BtuiProvider>);
+    expect(screen.getByLabelText("Tutar")).toHaveValue("1.500");
+    await user.click(screen.getByRole("button", { name: "Artır" }));
+    await user.click(screen.getByRole("button", { name: "Artır" }));
+    expect(onChange).toHaveBeenLastCalledWith(1501);
+  });
+
+  it("RadioGroup reports its value", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<RadioGroup aria-label="Tür" onChange={onChange} options={[{ value: "a", label: "Bir" }, { value: "b", label: "İki" }]} />);
+    await user.click(screen.getByRole("radio", { name: "İki" }));
+    expect(onChange).toHaveBeenCalledWith("b");
+  });
+
+  it("dismissible Alert goes away", async () => {
+    const user = userEvent.setup();
+    const onDismiss = vi.fn();
+    render(<Alert title="Dikkat" dismissible onDismiss={onDismiss} />);
+    await user.click(screen.getByRole("button", { name: "Kapat" }));
+    expect(screen.queryByText("Dikkat")).toBeNull();
+    expect(onDismiss).toHaveBeenCalled();
+  });
+
+  it("Accordion opens a panel from the keyboard", async () => {
+    const user = userEvent.setup();
+    render(<Accordion items={[{ value: "a", title: "Başlık", content: "İçerik" }]} />);
+    screen.getByRole("button", { name: "Başlık" }).focus();
+    await user.keyboard("{Enter}");
+    expect(screen.getByRole("button", { name: "Başlık" })).toHaveAttribute("aria-expanded", "true");
+  });
+});
+
+describe("0.2 fixes", () => {
+  it("Tabs skips a disabled first tab", () => {
+    render(<Tabs items={[{ value: "a", label: "Bir", disabled: true, content: "birinci" }, { value: "b", label: "İki", content: "ikinci" }]} />);
+    expect(screen.getByRole("tab", { name: "İki" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("Sidebar item without href is a keyboard-reachable button", async () => {
+    const user = userEvent.setup();
+    const onClick = vi.fn();
+    render(<BtuiProvider><Sidebar groups={[{ items: [{ label: "Çıkış", onClick }] }]} /></BtuiProvider>);
+    screen.getByRole("button", { name: "Çıkış" }).focus();
+    await user.keyboard("{Enter}");
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("DataTable honours defaultDensity and Space on a row", async () => {
+    const user = userEvent.setup();
+    const onRowClick = vi.fn();
+    const { container } = render(<DataTable defaultDensity="compact" columns={columns} rows={rows.slice(0, 1)} getRowKey={(r) => r.id} onRowClick={onRowClick} />);
+    expect(container.querySelector(".bt-table-card")).toHaveAttribute("data-density", "compact");
+    container.querySelector<HTMLElement>("tbody tr")!.focus();
+    await user.keyboard(" ");
+    expect(onRowClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("Avatar names itself and upper-cases by locale", () => {
+    render(<BtuiProvider><Avatar name="ipek ince" /></BtuiProvider>);
+    expect(screen.getByRole("img", { name: "ipek ince" })).toHaveTextContent("İİ");
   });
 });

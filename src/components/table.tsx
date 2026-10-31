@@ -65,8 +65,12 @@ export type DataTableProps<T> = {
   /** Chips in the band, beside the title. */
   chips?: ReactNode;
   actions?: ReactNode;
+  /** `accent` fills the band with the brand colour. */
+  bandTone?: "plain" | "accent";
   /** Column and density menus. On by default when the table has a band. */
   controls?: boolean;
+  /** Starting row density. A value saved under `storageKey` wins. */
+  defaultDensity?: "comfortable" | "compact";
   /** localStorage key that remembers hidden columns and density. */
   storageKey?: string;
   pageSize?: number;
@@ -79,9 +83,14 @@ export type DataTableProps<T> = {
   empty?: ReactNode;
   onRowClick?: (row: T) => void;
   selectedKey?: string | number | null;
+  /** Checkbox column. Pass with `onSelectionChange`. */
+  selectedKeys?: Array<string | number>;
+  onSelectionChange?: (keys: Array<string | number>) => void;
+  /** Shown in the band while rows are checked. */
+  bulkActions?: ReactNode;
   renderDetail?: (row: T) => ReactNode;
   rowClassName?: (row: T) => string | undefined;
-  /** Extra content on the left of the footer, such as totals. */
+  /** Replaces the record counter on the left of the footer, such as with totals. */
   footerNote?: ReactNode;
   maxHeight?: number | string;
   className?: string;
@@ -112,13 +121,13 @@ export function sortRows<T>(rows: T[], column: Column<T> | undefined, direction:
 }
 
 export function DataTable<T>({
-  columns, rows, getRowKey, title, titleNote, icon, chips, actions, controls, storageKey, pageSize, server, sort, defaultSort = null, onSortChange,
-  loading, empty, onRowClick, selectedKey, renderDetail, rowClassName, footerNote, maxHeight, className,
+  columns, rows, getRowKey, title, titleNote, icon, chips, actions, bandTone = "plain", controls, defaultDensity = "comfortable", storageKey, pageSize, server, sort, defaultSort = null, onSortChange,
+  loading, empty, onRowClick, selectedKey, selectedKeys, onSelectionChange, bulkActions, renderDetail, rowClassName, footerNote, maxHeight, className,
 }: DataTableProps<T>) {
   const t = useLocale();
   const initialHidden = useMemo(() => columns.filter((c) => c.hidden).map((c) => c.key), [columns]);
   const [hidden, setHidden] = useState<string[]>(initialHidden);
-  const [compact, setCompact] = useState(false);
+  const [compact, setCompact] = useState(defaultDensity === "compact");
   const [ownSort, setOwnSort] = useState<SortState | null>(defaultSort);
   const [ownPage, setOwnPage] = useState(1);
   const [open, setOpen] = useState<Set<string | number>>(() => new Set());
@@ -187,16 +196,29 @@ export function DataTable<T>({
     });
   }
 
-  const hasBand = !!(title || chips || actions);
+  const hasBand = !!(title || chips || actions || bulkActions);
   const showControls = controls ?? hasBand;
   const hideable = columns.filter((c) => c.hideable !== false);
   const hasFooter = visible.some((c) => c.footer !== undefined);
-  const span = visible.length + (renderDetail ? 1 : 0);
+  const selectable = !!onSelectionChange;
+  const checked = selectedKeys ?? [];
+  const pageKeys = shown.map(getRowKey);
+  const pageChecked = pageKeys.filter((k) => checked.includes(k)).length;
+  const span = visible.length + (renderDetail ? 1 : 0) + (selectable ? 1 : 0);
+
+  function togglePage(on: boolean) {
+    const rest = checked.filter((k) => !pageKeys.includes(k));
+    onSelectionChange?.(on ? [...rest, ...pageKeys] : rest);
+  }
+
+  function toggleRow(key: string | number, on: boolean) {
+    onSelectionChange?.(on ? [...checked, key] : checked.filter((k) => k !== key));
+  }
 
   return (
     <section className={cx("bt-table-card", className)} data-density={compact ? "compact" : "comfortable"}>
       {hasBand || showControls ? (
-        <div className="bt-band">
+        <div className="bt-band" data-tone={bandTone}>
           {title ? (
             <span className="bt-band-title">
               {icon}
@@ -204,7 +226,9 @@ export function DataTable<T>({
               {titleNote !== undefined ? <small>({titleNote})</small> : null}
             </span>
           ) : null}
-          {chips}
+          {checked.length > 0 && bulkActions ? (
+            <span className="bt-band-bulk">{t.selected(checked.length)}{bulkActions}</span>
+          ) : chips}
           <span className="bt-band-space" />
           {showControls ? (
             <>
@@ -243,6 +267,11 @@ export function DataTable<T>({
         <table className={cx("bt-table", loading && rows.length > 0 && "bt-table-loading")} aria-busy={loading || undefined}>
           <thead>
             <tr>
+              {selectable ? (
+                <th data-select="">
+                  <Checkbox aria-label={t.selectAll} checked={pageKeys.length > 0 && pageChecked === pageKeys.length} indeterminate={pageChecked > 0 && pageChecked < pageKeys.length} onChange={togglePage} />
+                </th>
+              ) : null}
               {renderDetail ? <th style={{ width: 38 }}><span className="bt-sr">{t.showDetail}</span></th> : null}
               {visible.map((c) => {
                 const canSort = c.sortable !== false && (!server || !!onSortChange);
@@ -275,11 +304,17 @@ export function DataTable<T>({
                       data-row=""
                       data-clickable={flag(onRowClick)}
                       data-selected={flag(selectedKey !== undefined && selectedKey === key)}
+                      aria-current={selectedKey !== undefined && selectedKey === key ? "true" : undefined}
                       className={rowClassName?.(row)}
                       tabIndex={onRowClick ? 0 : undefined}
                       onClick={onRowClick ? () => onRowClick(row) : undefined}
-                      onKeyDown={onRowClick ? (e) => { if (e.key === "Enter" && e.target === e.currentTarget) onRowClick(row); } : undefined}
+                      onKeyDown={onRowClick ? (e) => { if ((e.key === "Enter" || e.key === " ") && e.target === e.currentTarget) { e.preventDefault(); onRowClick(row); } } : undefined}
                     >
+                      {selectable ? (
+                        <td data-select="" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox aria-label={t.selectRow} checked={checked.includes(key)} onChange={(on) => toggleRow(key, on)} />
+                        </td>
+                      ) : null}
                       {renderDetail ? (
                         <td>
                           <button type="button" className="bt-detail-toggle" aria-label={t.showDetail} aria-expanded={expanded} onClick={(e) => { e.stopPropagation(); toggleDetail(key); }}>
@@ -302,6 +337,7 @@ export function DataTable<T>({
           {hasFooter ? (
             <tfoot>
               <tr>
+                {selectable ? <td /> : null}
                 {renderDetail ? <td /> : null}
                 {visible.map((c) => <td key={c.key} data-align={c.align}>{c.footer}</td>)}
               </tr>
