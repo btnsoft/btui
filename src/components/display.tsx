@@ -1,0 +1,72 @@
+import type { ComponentPropsWithoutRef, ReactNode } from "react";
+import { Avatar as BaseAvatar } from "@base-ui/react/avatar";
+import { useLocale } from "../locale";
+import { cx, flag, type Tone } from "../utils";
+
+export type BadgeProps = ComponentPropsWithoutRef<"span"> & { tone?: Tone };
+
+export function Badge({ tone = "neutral", className, ...rest }: BadgeProps) {
+  return <span className={cx("bt-badge", className)} data-tone={tone} {...rest} />;
+}
+
+export type StatusProps = ComponentPropsWithoutRef<"span"> & { tone?: "neutral" | "ok" | "warn" | "danger" | "muted" };
+
+export function Status({ tone = "neutral", className, ...rest }: StatusProps) {
+  return <span className={cx("bt-status", className)} data-tone={tone} {...rest} />;
+}
+
+export type ChipProps = Omit<ComponentPropsWithoutRef<"button">, "type"> & {
+  active?: boolean;
+  count?: ReactNode;
+  /** Solid status colour. Only applied inside a DataTable band. */
+  tone?: Tone;
+};
+
+export function Chip({ active, count, tone, className, children, ...rest }: ChipProps) {
+  return (
+    <button type="button" className={cx("bt-chip", className)} aria-pressed={!!active} data-active={flag(active)} data-tone={tone} {...rest}>
+      {children}
+      {count !== undefined ? <span className="bt-chip-count">{count}</span> : null}
+    </button>
+  );
+}
+
+export function ChipGroup({ className, ...rest }: ComponentPropsWithoutRef<"div">) {
+  return <div role="group" className={cx("bt-chips", className)} {...rest} />;
+}
+
+export function Kbd({ className, ...rest }: ComponentPropsWithoutRef<"kbd">) {
+  return <kbd className={cx("bt-kbd", className)} {...rest} />;
+}
+
+export type AvatarProps = { name: string; src?: string; size?: number; className?: string };
+
+export function Avatar({ name, src, size, className }: AvatarProps) {
+  const initials = name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toLocaleUpperCase();
+  return (
+    <BaseAvatar.Root className={cx("bt-avatar", className)} style={size ? { width: size, height: size, fontSize: size * 0.38 } : undefined}>
+      {src ? <BaseAvatar.Image src={src} alt={name} /> : null}
+      <BaseAvatar.Fallback>{initials}</BaseAvatar.Fallback>
+    </BaseAvatar.Root>
+  );
+}
+
+export function Spinner({ size, label }: { size?: number; label?: string }) {
+  const t = useLocale();
+  return <span role="status" aria-label={label ?? t.loading} className="bt-spinner" style={size ? { width: size, height: size } : undefined} />;
+}
+
+export function Loading({ children }: { children?: ReactNode }) {
+  const t = useLocale();
+  return (
+    <div className="bt-loading" role="status">
+      <span className="bt-spinner" aria-hidden="true" />
+      {children ?? t.loading}
+    </div>
+  );
+}
+
+export function EmptyState({ children }: { children?: ReactNode }) {
+  const t = useLocale();
+  return <div className="bt-empty">{children ?? t.empty}</div>;
+}
